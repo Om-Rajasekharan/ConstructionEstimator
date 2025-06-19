@@ -1,0 +1,7 @@
+node_modules
+.env
+UI/.env
+Server/.env
+Server/data/sam_api_attachments
+Server/data/sam_api_opportunity_pdfs
+Server/data/SAM/
