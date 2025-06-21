@@ -5,14 +5,15 @@ from dotenv import load_dotenv
 import PyPDF2
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
+import shutil
 
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '.env'))
 
-SAM_API_KEY = os.getenv('SAM_API_KEY') or 'YOUR_API_KEY_HERE'
+SAM_API_KEY = os.getenv('SAM_API_KEY')
 QUERY = "construction"
 LIMIT = 1000
-posted_to = (datetime.now() - timedelta(days=465)).strftime("%m/%d/%Y")
-posted_from = (datetime.now() - timedelta(days=595)).strftime("%m/%d/%Y")
+posted_to = (datetime.now() - timedelta(days=300)).strftime("%m/%d/%Y")
+posted_from = (datetime.now() - timedelta(days=600)).strftime("%m/%d/%Y")
 
 def fetch_opportunities(query, limit, posted_from, posted_to):
     url = "https://api.sam.gov/opportunities/v2/search"
@@ -34,7 +35,7 @@ def get_extension_from_content(content):
         return '.pdf'
     return ''
 
-def download_attachments(opps, download_folder, min_size_bytes=50000):
+def download_attachments(opps, download_folder, min_size_bytes=50):
     os.makedirs(download_folder, exist_ok=True)
     for opp in opps:
         notice_id = opp.get('noticeId')
@@ -175,12 +176,4 @@ if __name__ == "__main__":
     download_attachments(opps, os.path.join(os.path.dirname(__file__), '../data/sam_api_attachments'))
     pdf_output_folder = os.path.join(os.path.dirname(__file__), '../data/sam_api_opportunity_pdfs')
     for opp in opps:
-        resource_links = opp.get('resourceLinks')
-        if resource_links:
-            for idx, _ in enumerate(resource_links):
-                create_opportunity_pdf(opp, pdf_output_folder, suffix=f'resource_{idx}')
-        addl_link = opp.get('additionalInfoLink')
-        if addl_link:
-            create_opportunity_pdf(opp, pdf_output_folder, suffix='attachment')
-        if not resource_links and not addl_link:
-            create_opportunity_pdf(opp, pdf_output_folder)
+        create_opportunity_pdf(opp, pdf_output_folder)
