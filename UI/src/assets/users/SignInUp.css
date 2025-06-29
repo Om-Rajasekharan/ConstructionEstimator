@@ -1,0 +1,203 @@
+
+.rustic-bg {
+  min-height: 100vh;
+  width: 100vw;
+  background: linear-gradient(120deg, #f5f6fa 0%, #e3e4e8 60%, #d1d3db 100%);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.rustic-bg::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 20% 30%, #e9e9ef 0%, transparent 60%),
+              radial-gradient(circle at 80% 70%, #e3e4e8 0%, transparent 70%);
+  animation: bg-float 8s ease-in-out infinite alternate;
+  z-index: 0;
+}
+
+.auth-card {
+  position: relative;
+  z-index: 1;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 8px 36px 0 #bfc2c744, 0 1.5px 0 #e3e4e8;
+  padding: 2.7rem 2.7rem 2.2rem 2.7rem;
+  max-width: 370px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border: 2px solid #e3e4e8;
+}
+.auth-title {
+  color: #232526;
+  font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+  font-size: 2.2rem;
+  font-weight: 900;
+  margin-bottom: 1.7rem;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+.auth-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+.auth-input {
+  padding: 1rem 1.2rem;
+  border: 1.5px solid #d1d3db;
+  border-radius: 10px;
+  font-size: 1.13rem;
+  font-weight: 500;
+  background: #f5f6fa;
+  color: #232526;
+  font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-shadow: 0 1.5px 0 #e3e4e8;
+}
+.auth-input:focus {
+  border-color: #232526;
+  box-shadow: 0 0 0 2px #bfc2c744;
+}
+.main-btn {
+  background: #232526;
+  color: #fff;
+  border: none;
+  border-radius: 100px;
+  padding: 1rem 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+  cursor: pointer;
+  margin-top: 0.5rem;
+  font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+  box-shadow: 0 2px 8px 0 #bfc2c733;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.main-btn:hover {
+  background: #444;
+  color: #fff;
+  box-shadow: 0 4px 16px 0 #bfc2c744;
+}
+.divider {
+  width: 100%;
+  text-align: center;
+  margin: 1.2rem 0 0.7rem 0;
+  position: relative;
+}
+.divider span {
+  background: #fff;
+  color: #bfc2c7;
+  padding: 0 1.1rem;
+  font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+  font-size: 1.05rem;
+  position: relative;
+  z-index: 1;
+  text-transform: none;
+  letter-spacing: 0.5px;
+}
+.divider:before {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; top: 50%;
+  height: 1.5px;
+  background: #e3e4e8;
+  z-index: 0;
+}
+.google-btn {
+  margin: 1.2rem 0 1.3rem 0;
+  background: #fff;
+  color: #232526;
+  border: 2.5px solid #e3e4e8;
+  border-radius: 14px 4px 14px 4px / 4px 14px 4px 14px;
+  padding: 0.7rem 0;
+  font-size: 1.13rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s, color 0.2s, background 0.2s;
+  box-shadow: 0 2px 12px 0 #e3e4e855;
+  letter-spacing: 0.5px;
+  min-height: 54px;
+  min-width: 260px;
+  position: relative;
+  overflow: hidden;
+  text-transform: none;
+  font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+  outline: none;
+  border-style: dashed;
+}
+.google-btn svg {
+  flex-shrink: 0;
+  margin-right: 0.7rem;
+  width: 28px;
+  height: 28px;
+  filter: none;
+}
+.google-btn span {
+  position: relative;
+  z-index: 1;
+  font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  padding-left: 0.2rem;
+}
+.google-btn:after {
+  display: none;
+}
+.google-btn:hover {
+  border-color: #232526;
+  box-shadow: 0 6px 24px 0 #bfc2c744;
+  transform: translateY(-2px) scale(1.04);
+  color: #fff;
+  background: #232526;
+}
+
+.switch-auth-row {
+  margin-top: 0.7rem;
+  color: #232526;
+  font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+  font-size: 1.01rem;
+}
+.switch-auth {
+  color: #232526;
+  background: none;
+  border: none;
+  font-size: 1.01rem;
+  cursor: pointer;
+  text-decoration: underline;
+  margin-left: 0.5rem;
+  font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+  font-weight: 700;
+}
+.auth-error {
+  color: #d32f2f;
+  margin-top: 0.7rem;
+  font-size: 0.98rem;
+  text-align: center;
+  font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+  font-weight: 700;
+}
+
+/* Add this keyframe for the background animation */
+@keyframes bg-float {
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-position: 100% 100%;
+  }
+}

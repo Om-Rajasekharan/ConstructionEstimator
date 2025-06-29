@@ -68,7 +68,7 @@ def extract_materials_from_pdf(pdf_path):
             "If a section is not mentioned, use an empty list or null. "
             "Sections:\n"
             "1. metadata: {title, location, owner, contact, issue_date, closing_date, other_dates}\n"
-            "2. materials: [list of materials, and for each, estimate the required amount and units (e.g., pounds, square feet, cubic feet, metric, etc.) based on the project description and scope]\n"
+            "2. materials: [list of all major and minor materials/parts, make sure material list is comprehensive. For each, provide: name/description, estimated required amount and units (e.g., pounds, square feet, cubic feet, metric, etc.), estimated cost per unit, reasoning for that material and number, evidence for that material and number, reasoning/evidence for materials that were intentionally left out (materials that were considered but not applicable, if necessary), and total estimated cost for that material.]\n"
             "3. labor: [list of labor types/trades, certifications, etc., and for each, estimate the number of manhours required based on the timeline, project size, and difficulty]\n"
             "4. equipment: [list of equipment, and for each, estimate the quantity or usage required for the project]\n"
             "5. permits_and_licenses: [list]\n"
@@ -81,14 +81,15 @@ def extract_materials_from_pdf(pdf_path):
             "12. contingencies_and_allowances: [list]\n"
             "13. quality_control_and_testing: [list]\n"
             "14. closeout_and_warranty: [list]\n\n"
+            "For each of the 14 sections above, in addition to the main content, include two fields: 'reasoning' (a concise explanation of how you determined the estimate or number for that section) and 'evidence' (direct textual evidence or references from the RFP text that support your estimate). Both fields should be specific and clear.\n"
             "Return your answer as a valid JSON object with these keys. "
             "For each section, provide a concise bullet-point list or a short description. "
-            "For 'materials', estimate the required amount and units for each item. "
+            "For 'materials', provide a detailed breakdown as described above. "
             "For 'labor', estimate the number of manhours for each labor type based on the timeline, size, and difficulty. "
             "For 'equipment', estimate the quantity or usage required for each type. "
             "For 'materials' and 'labor', suggest options if possible. "
             "For 'labor', also note if wage selection is required or if average wages can be used.\n\n"
-            "At the end of your response, provide a JSON object called 'section_costs' with estimated costs for each of the 14 sections above (use the same keys), and a 'total_bid' field with the sum of all section costs. Example: {'section_costs': {'materials': 10000, ...}, 'total_bid': 50000}. Return this as part of the main JSON object.\n\n"
+            "At the end of your response, you must: (1) Provide a JSON object called 'section_costs' with estimated costs for each of the 14 sections above (use the same keys). For each section, estimate a reasonable cost based on the RFP text, industry standards, or typical project requirements. Do not leave any section at zero unless there is clear evidence in the RFP that the cost is truly zero. (2) Provide a 'total_bid' field with the sum of all section costs. (3) Provide a JSON object called 'section_costs_explanation' with, for each section, a 'reasoning' and 'evidence' field explaining and supporting the cost estimate. Example: {'section_costs': {'materials': 10000, 'labor': 15000, 'equipment': 5000, ...}, 'total_bid': 40000, 'section_costs_explanation': {'materials': {'reasoning': '...', 'evidence': '...'}, 'labor': {'reasoning': '...', 'evidence': '...'}, ...}}. Return all of these as part of the main JSON object.\n\n"
             + chunk
         )
         response = openai.chat.completions.create(

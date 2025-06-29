@@ -8,15 +8,9 @@ html, body, #root {
 }
 
 body {
-  background: linear-gradient(120deg, #e3eafc 0%, #d1eaff 50%, #e3eafc 100%);
+  background: #ffffff;
   background-size: 200% 200%;
-  animation: bgMove 12s ease-in-out infinite;
-}
-
-@keyframes bgMove {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  animation: none;
 }
 
 #root {
@@ -64,7 +58,6 @@ body {
   color: #888;
 }
 
-/* Remove scrollbars for a cleaner look */
 body::-webkit-scrollbar, #root::-webkit-scrollbar {
   display: none;
 }

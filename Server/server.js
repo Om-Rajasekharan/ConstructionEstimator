@@ -1,6 +1,8 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const mongoose = require('mongoose');
 const pdfparserRoutes = require('./routes/pdfparser');
 
 const app = express();
@@ -25,6 +27,26 @@ app.use(cors({
 
 app.use(express.json());
 
+app.use('/api/auth', require('./routes/userverification'));
+app.use('/api/projects', require('./routes/projects'));
+app.use('/api/postresponse', require('./routes/postresponse'));
+app.use('/api/conversation', require('./routes/conversation'));
+
+mongoose.connect(process.env.MONGO_DB_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+.then(() => {
+  console.log('MongoDB connected');
+  app.listen(PORT, () => {
+    console.log(`PDF backend server running on port ${PORT}`);
+  });
+})
+.catch(err => {
+  console.error('MongoDB connection error:', err);
+  process.exit(1);
+});
+
 app.use('/api/pdf', (req, res, next) => {
   console.log(`[server.js] Incoming request: ${req.method} ${req.originalUrl}`);
   if (req.file) {
@@ -43,7 +65,3 @@ app.use('/api/pdf', (req, res, next) => {
   };
   next();
 }, pdfparserRoutes);
-
-app.listen(PORT, () => {
-  console.log(`PDF backend server running on port ${PORT}`);
-});

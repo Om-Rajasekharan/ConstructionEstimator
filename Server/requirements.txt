@@ -1,0 +1,17 @@
+requests
+python-dotenv
+tqdm
+PyPDF2
+reportlab
+bs4
+urllib3
+fitz
+pytesseract
+pdf2image
+Pillow
+langchain
+pinecone-client
+sentence-transformers
+transformers
+pdfplumber
+openai
