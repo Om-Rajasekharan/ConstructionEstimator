@@ -14,6 +14,7 @@ import PDFUploadBox from './assets/components/PDFUploadBox';
 import Navigation from './assets/tabs/Navigation';
 import Dashboard from './assets/tabs/Dashboard';
 import Calculate from './assets/components/Calculate';
+import ProjectWorkspacePage from './assets/pages/ProjectWorkspacePage';
 
 async function fetchUser(token) {
   const res = await fetch(import.meta.env.VITE_API_URL + '/api/auth/me', {
@@ -71,8 +72,12 @@ function App() {
     const token = localStorage.getItem('token');
     if (token && (!user || !user.token)) {
       fetchUser(token).then(userInfo => {
-        if (userInfo) setUser({ ...userInfo, token });
-        else setUser({ token });
+        if (userInfo) {
+          setUser({ ...userInfo, token });
+        } else {
+          localStorage.removeItem('token');
+          setUser(null);
+        }
       });
     }
   }, []);
@@ -260,19 +265,14 @@ function App() {
     mainContent = (
       <Dashboard user={user} onProjectSelect={proj => {
         setSelectedProject(proj);
-        setCurrentTab('pdf');
-        if (proj.gcsAiUrl || proj.aiUrl) {
-          fetchProject(proj._id || proj.id);
-        } else {
-          setPdfFile(null);
-          setPdfUrl(null);
-          setSections({});
-          setStreamDone(false);
-          setProjectId(proj._id || proj.id);
-          setProjectMeta(proj);
-          setPdfRemoteUrl(null);
-        }
+        setCurrentTab('workspace');
       }} />
+    );
+  } else if (currentTab === 'workspace' && selectedProject) {
+    mainContent = (
+      <Box sx={{ minHeight: '100vh', bgcolor: '#f4f6fa', display: 'flex', flexDirection: 'column' }}>
+        <ProjectWorkspacePage project={selectedProject} />
+      </Box>
     );
   } else if (currentTab === 'pdf' && (selectedProject || pdfFile)) {
     mainContent = (

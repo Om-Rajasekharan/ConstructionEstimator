@@ -4,8 +4,16 @@ const Schema = mongoose.Schema;
 const projectSchema = new Schema({
   name: { type: String, required: true },
   owner: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-  gcsPdfUrl: { type: String }, // GCS URL for the PDF
-  gcsAiUrl: { type: String },  // GCS URL for the AI response JSON
+  files: [
+    {
+      name: { type: String, required: true },
+      type: { type: String },
+      gcsUrl: { type: String, required: true },
+      uploadedAt: { type: Date, default: Date.now },
+      metadata: { type: Object },
+    }
+  ],
+  gcsAiUrl: { type: String }, 
   model: { type: String },
   temperature: { type: Number },
   customPrompt: { type: String },

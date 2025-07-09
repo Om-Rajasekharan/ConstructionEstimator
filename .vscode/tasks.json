@@ -1,0 +1,10 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "shell",
+			"label": "Print manifest for debugging",
+			"command": "node -e \"const fs=require('fs');console.log(JSON.stringify(JSON.parse(fs.readFileSync('rfpdb_pdfs/project_6865a0712021b93fb2e80968/1751490683892_Rec Center Plans.pdf/manifest.json','utf8')),null,2))\""
+		}
+	]
+}

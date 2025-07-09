@@ -39,6 +39,8 @@ async function authUser(req, res, next) {
   }
 }
 
+
+
 router.post('/calculate', authUser, upload.single('pdf'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No PDF file uploaded.' });
 
@@ -48,7 +50,6 @@ router.post('/calculate', authUser, upload.single('pdf'), async (req, res) => {
   const gcsPdfUrl = `gs://${bucket.name}/${gcsPdfFileName}`;
 
   const pdfPath = req.file.path;
-  console.log(`[PDFParser] Received calculate request. Starting processing for file: ${pdfPath}`);
 
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
@@ -68,13 +69,11 @@ router.post('/calculate', authUser, upload.single('pdf'), async (req, res) => {
         const chunk = JSON.parse(line);
         aiResponseChunks.push(chunk);
         res.write(`data: ${JSON.stringify(chunk)}\n\n`);
-      } catch (e) {
-      }
+      } catch (e) {}
     }
   });
 
   py.stderr.on('data', (data) => {
-    console.error('[PDFParser] Python stderr:', data.toString());
     res.write(`event: error\ndata: {"error": ${JSON.stringify(data.toString())}}\n\n`);
   });
 
@@ -124,6 +123,63 @@ router.post('/calculate', authUser, upload.single('pdf'), async (req, res) => {
         customPrompt,
       });
     }
+  });
+});
+
+router.post('/processPdf', authUser, upload.single('pdf'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No PDF file uploaded.' });
+
+  const { projectId } = req.body;
+  if (!projectId) return res.status(400).json({ error: 'Missing projectId' });
+  const project = await Project.findById(projectId);
+  if (!project) return res.status(404).json({ error: 'Project not found' });
+
+  const pdfPath = req.file.path;
+  const gcsPrefix = `project_${projectId}/${Date.now()}_${req.file.originalname.replace(/\\.[^/.]+$/, '')}`;
+  const py = spawn('python', [
+    path.join(__dirname, '../prep/pdf_to_image_and_gcs.py'),
+    pdfPath,
+    bucket.name,
+    gcsPrefix
+  ]);
+
+  let stdoutData = '';
+  let stderrData = '';
+  py.stdout.on('data', (data) => {
+    stdoutData += data.toString();
+  });
+  py.stderr.on('data', (data) => {
+    stderrData += data.toString();
+  });
+  py.on('close', async (code) => {
+    fs.unlink(pdfPath, () => {});
+
+    let manifest = [];
+    const lines = stdoutData.split(/\r?\n/).filter(Boolean);
+    for (let i = lines.length - 1; i >= 0; i--) {
+      try {
+        manifest = JSON.parse(lines[i]);
+        break;
+      } catch {}
+    }
+
+    const manifestFile = bucket.file(`${gcsPrefix}/manifest.json`);
+    await manifestFile.save(JSON.stringify(manifest), { contentType: 'application/json' });
+    await Project.findByIdAndUpdate(
+      projectId,
+      {
+        $push: {
+          files: {
+            name: req.file.originalname,
+            type: 'application/pdf',
+            gcsUrl: `gs://${bucket.name}/${gcsPrefix}/manifest.json`,
+            pageImages: manifest,
+            uploadedAt: new Date()
+          }
+        }
+      }
+    );
+    res.json({ success: true, message: 'PDF processed and uploaded successfully.', manifest, stderr: stderrData });
   });
 });
 

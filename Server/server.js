@@ -31,26 +31,22 @@ app.use('/api/auth', require('./routes/userverification'));
 app.use('/api/projects', require('./routes/projects'));
 app.use('/api/postresponse', require('./routes/postresponse'));
 app.use('/api/conversation', require('./routes/conversation'));
+app.use('/api/image', require('./routes/imageproxy'));
 
 mongoose.connect(process.env.MONGO_DB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
 .then(() => {
-  console.log('MongoDB connected');
   app.listen(PORT, () => {
-    console.log(`PDF backend server running on port ${PORT}`);
   });
 })
 .catch(err => {
-  console.error('MongoDB connection error:', err);
   process.exit(1);
 });
 
 app.use('/api/pdf', (req, res, next) => {
-  console.log(`[server.js] Incoming request: ${req.method} ${req.originalUrl}`);
   if (req.file) {
-    console.log(`[server.js] Uploaded file:`, req.file);
   }
   const originalWrite = res.write;
   res.write = function(chunk, encoding, callback) {
@@ -58,7 +54,6 @@ app.use('/api/pdf', (req, res, next) => {
       const str = chunk.toString();
       if (str.startsWith('data: ')) {
         const jsonStr = str.replace('data: ', '').trim();
-        console.log('[server.js] Streaming SSE data to frontend:', jsonStr);
       }
     } catch {}
     return originalWrite.apply(this, arguments);

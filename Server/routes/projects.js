@@ -43,7 +43,6 @@ router.post('/', authUser, async (req, res) => {
   }
 });
 
-// GET /api/projects/:id - fetch a single project by ID
 router.get('/:id', authUser, async (req, res) => {
   const project = await Project.findById(req.params.id);
   if (!project) return res.status(404).json({ error: 'Not found' });
@@ -52,14 +51,41 @@ router.get('/:id', authUser, async (req, res) => {
   let pdfUrl = null;
   let aiUrl = null;
   if (project.gcsPdfUrl) {
-    const pdfFile = bucket.file(project.gcsPdfUrl.split('/').pop());
+    const pdfPath = project.gcsPdfUrl.replace(/^gs:\/\//, '').split('/').slice(1).join('/');
+    const pdfFile = bucket.file(pdfPath);
     [pdfUrl] = await pdfFile.getSignedUrl({ action: 'read', expires: Date.now() + 60 * 60 * 1000 });
   }
   if (project.gcsAiUrl) {
-    const aiFile = bucket.file(project.gcsAiUrl.split('/').pop());
+    const aiPath = project.gcsAiUrl.replace(/^gs:\/\//, '').split('/').slice(1).join('/');
+    const aiFile = bucket.file(aiPath);
     [aiUrl] = await aiFile.getSignedUrl({ action: 'read', expires: Date.now() + 60 * 60 * 1000 });
   }
-  res.json({ ...project.toObject(), pdfUrl, aiUrl });
+  let filesWithSignedUrls = [];
+  if (Array.isArray(project.files)) {
+    filesWithSignedUrls = await Promise.all(project.files.map(async (file) => {
+      let url = file.gcsUrl;
+      if (file.gcsUrl && file.gcsUrl.startsWith('gs://')) {
+        try {
+          const filePath = file.gcsUrl.replace(/^gs:\/\//, '').split('/').slice(1).join('/');
+          const gcsFile = bucket.file(filePath);
+          [url] = await gcsFile.getSignedUrl({ action: 'read', expires: Date.now() + 60 * 60 * 1000 });
+        } catch (err) {
+          url = null;
+        }
+      } 
+      const base = (file.toObject && file.toObject()) || file;
+      return {
+        ...base,
+        id: base._id ? base._id.toString() : undefined,
+        url
+      };
+    }));
+  }
+  const projectObj = project.toObject();
+  projectObj.files = filesWithSignedUrls;
+  projectObj.pdfUrl = pdfUrl;
+  projectObj.aiUrl = aiUrl;
+  res.json(projectObj);
 });
 
 module.exports = router;

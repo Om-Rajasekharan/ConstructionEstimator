@@ -15,3 +15,5 @@ sentence-transformers
 transformers
 pdfplumber
 openai
+easyocr
+google-cloud-storage
