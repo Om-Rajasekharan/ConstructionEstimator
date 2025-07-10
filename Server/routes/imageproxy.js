@@ -66,17 +66,34 @@ router.get('/:projectId/:docId/:pageNum', authUser, async (req, res) => {
   const pageNumInt = parseInt(pageNum, 10);
   try {
     const project = await Project.findById(projectId);
-    if (!project) return res.status(404).json({ error: 'Project not found' });
+    if (!project) {
+      console.error('Project not found', { projectId });
+      return res.status(404).json({ error: 'Project not found' });
+    }
     const file = project.files.id(docId);
-    if (!file) return res.status(404).json({ error: 'Document not found' });
+    if (!file) {
+      console.error('Document not found', { docId, files: project.files });
+      return res.status(404).json({ error: 'Document not found' });
+    }
     if (String(project.owner) !== String(req.user._id)) return res.status(403).json({ error: 'Forbidden' });
     let imagePath = null;
     let manifestDebug = null;
+    let manifestDir = null;
+    if (file.gcsUrl && file.gcsUrl.endsWith('manifest.json')) {
+      const manifestPathParts = file.gcsUrl.replace(/^gs:\/\//, '').split('/').slice(1); // remove bucket
+      manifestDir = manifestPathParts.slice(0, -1).join('/');
+    }
     if (Array.isArray(file.pageImages) && file.pageImages.length >= pageNumInt) {
       const img = file.pageImages[pageNumInt - 1];
       if (img) {
         if (typeof img === 'string') {
-          imagePath = img.replace(/^gs:\/\//, '').split('/').slice(1).join('/');
+          if (img.startsWith('gs://')) {
+            imagePath = img.replace(/^gs:\/\//, '').split('/').slice(1).join('/');
+          } else if (manifestDir && !img.startsWith('/')) {
+            imagePath = manifestDir + '/' + img;
+          } else {
+            imagePath = img;
+          }
         } else if (img.gcsUrl) {
           imagePath = img.gcsUrl.replace(/^gs:\/\//, '').split('/').slice(1).join('/');
         }
@@ -107,7 +124,13 @@ router.get('/:projectId/:docId/:pageNum', authUser, async (req, res) => {
           const img = pageImages[pageNumInt - 1];
           if (img) {
             if (typeof img === 'string') {
-              imagePath = img.replace(/^gs:\/\//, '').split('/').slice(1).join('/');
+              if (img.startsWith('gs://')) {
+                imagePath = img.replace(/^gs:\/\//, '').split('/').slice(1).join('/');
+              } else if (manifestDir && !img.startsWith('/')) {
+                imagePath = manifestDir + '/' + img;
+              } else {
+                imagePath = img;
+              }
             } else if (img.gcsUrl) {
               imagePath = img.gcsUrl.replace(/^gs:\/\//, '').split('/').slice(1).join('/');
             }
@@ -117,15 +140,26 @@ router.get('/:projectId/:docId/:pageNum', authUser, async (req, res) => {
           const img = pageImages[key] || pageImages[pageNumInt];
           if (img) {
             if (typeof img === 'string') {
-              imagePath = img.replace(/^gs:\/\//, '').split('/').slice(1).join('/');
+              if (img.startsWith('gs://')) {
+                imagePath = img.replace(/^gs:\/\//, '').split('/').slice(1).join('/');
+              } else if (manifestDir && !img.startsWith('/')) {
+                imagePath = manifestDir + '/' + img;
+              } else {
+                imagePath = img;
+              }
             } else if (img.gcsUrl) {
               imagePath = img.gcsUrl.replace(/^gs:\/\//, '').split('/').slice(1).join('/');
             }
           }
         }
-      } catch (e) {}
+      } catch (e) {
+        console.error('Manifest parse error', { error: e, data });
+      }
     }
-    if (!imagePath) return res.status(404).json({ error: 'Image not found' });
+    if (!imagePath) {
+      console.error('Image not found', { projectId, docId, pageNum, manifestDebug });
+      return res.status(404).json({ error: 'Image not found' });
+    }
     const gcsFile = bucket.file(imagePath);
     res.set('Content-Type', 'image/png');
     gcsFile.createReadStream()
@@ -134,6 +168,7 @@ router.get('/:projectId/:docId/:pageNum', authUser, async (req, res) => {
       })
       .pipe(res);
   } catch (err) {
+    console.error('Server error', { error: err });
     res.status(500).json({ error: 'Server error', details: err.message });
   }
 });

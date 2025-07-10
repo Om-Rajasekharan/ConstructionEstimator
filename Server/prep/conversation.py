@@ -25,7 +25,7 @@ def extract_text_from_image(image_path):
     print(f"[DEBUG] Attempting OCR on: {image_path}", file=sys.stderr)
     try:
         with Image.open(image_path) as img:
-            max_dim = 2000
+            max_dim = 1000
             if img.width > max_dim or img.height > max_dim:
                 scale = min(max_dim / img.width, max_dim / img.height)
                 new_size = (int(img.width * scale), int(img.height * scale))

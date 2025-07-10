@@ -19,55 +19,56 @@ export default function Workspace({ project }) {
   const [draggingAI, setDraggingAI] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
-  useEffect(() => {
-    async function fetchDocs() {
-      if (!project) return;
-      try {
-        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/projects/${project._id || project.id}`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          const docs = await Promise.all((data.files || []).map(async (f, idx) => {
-            const isManifest = f.gcsUrl && f.gcsUrl.endsWith('manifest.json');
-            let docObj = {
-              id: f.id || f._id || idx,
-              name: f.name,
-              type: f.type,
-              url: f.gcsUrl || f.url,
-              gcsUrl: f.gcsUrl,
-            };
-            if (isManifest) {
-              try {
-                const manifestUrl = `${import.meta.env.VITE_API_URL}/api/image/manifest/${project._id || project.id}/${f.id || f._id || idx}`;
-                const manifestRes = await fetch(manifestUrl, {
-                  headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-                });
-                if (manifestRes.ok) {
-                  const manifest = await manifestRes.json();
-                  docObj.pageImages = Array.isArray(manifest) ? manifest : [];
-                } else {
-                  docObj.pageImages = [];
-                }
-              } catch {
+  const fetchDocs = async () => {
+    if (!project) return;
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/projects/${project._id || project.id}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const docs = await Promise.all((data.files || []).map(async (f, idx) => {
+          const isManifest = f.gcsUrl && f.gcsUrl.endsWith('manifest.json');
+          let docObj = {
+            id: f.id || f._id || idx,
+            name: f.name,
+            type: f.type,
+            url: f.gcsUrl || f.url,
+            gcsUrl: f.gcsUrl,
+          };
+          if (isManifest) {
+            try {
+              const manifestUrl = `${import.meta.env.VITE_API_URL}/api/image/manifest/${project._id || project.id}/${f.id || f._id || idx}`;
+              const manifestRes = await fetch(manifestUrl, {
+                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+              });
+              if (manifestRes.ok) {
+                const manifest = await manifestRes.json();
+                docObj.pageImages = Array.isArray(manifest) ? manifest : [];
+              } else {
                 docObj.pageImages = [];
               }
-            } else if (f.type === 'application/pdf' && (f.url || f.gcsUrl)) {
-              try {
-                const loadingTask = pdfjsLib.getDocument({ url: f.url || f.gcsUrl });
-                const pdf = await loadingTask.promise;
-                docObj.pages = Array.from({ length: pdf.numPages }, (_, i) => ({ pageNumber: i + 1 }));
-              } catch (err) {
-                docObj.pages = [];
-              }
+            } catch {
+              docObj.pageImages = [];
             }
-            return docObj;
-          }));
-          setDocuments(docs);
-          setSelectedDocId(docs[0]?.id || null);
-        }
-      } catch {}
-    }
+          } else if (f.type === 'application/pdf' && (f.url || f.gcsUrl)) {
+            try {
+              const loadingTask = pdfjsLib.getDocument({ url: f.url || f.gcsUrl });
+              const pdf = await loadingTask.promise;
+              docObj.pages = Array.from({ length: pdf.numPages }, (_, i) => ({ pageNumber: i + 1 }));
+            } catch (err) {
+              docObj.pages = [];
+            }
+          }
+          return docObj;
+        }));
+        setDocuments(docs);
+        setSelectedDocId(docs[0]?.id || null);
+      }
+    } catch {}
+  };
+
+  useEffect(() => {
     fetchDocs();
   }, [project]);
 
@@ -81,7 +82,6 @@ export default function Workspace({ project }) {
       if (match[2]) {
         selectedPage = parseInt(match[2], 10);
       } else if (selectedDoc && selectedDoc.pageImages && selectedDoc.pageImages.length > 0) {
-        // If no page is selected, default to first page (1)
         selectedPage = 1;
       }
     }
@@ -116,19 +116,16 @@ export default function Workspace({ project }) {
           body: formData,
         });
         if (!res.ok) throw new Error('Upload failed');
-        const data = await res.json();
-        if (data && data.manifest) {
-          setDocuments(prev => [
-            ...prev,
-            {
-              id: `${Date.now()}_${i}`,
-              name: file.name,
-              type: 'application/pdf',
-              url: data.manifest.length > 0 ? data.manifest[0] : '',
-              gcsUrl: data.manifest.length > 0 ? data.manifest[0] : '',
-              pageImages: data.manifest,
-            },
-          ]);
+
+        await new Promise(r => setTimeout(r, 400)); 
+        const res2 = await fetch(`${import.meta.env.VITE_API_URL}/api/projects/${project._id || project.id}`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        });
+        if (res2.ok) {
+          const data = await res2.json();
+          if (data.files && data.files.length > 0) {
+            setSelectedDocId(data.files[0].id || data.files[0]._id);
+          }
         }
       } catch (e) {
         setUploadError('Upload failed.');
@@ -148,7 +145,12 @@ export default function Workspace({ project }) {
     setDraggingAI(false);
   }
 
-  if (!documents.length) {
+  const [showUpload, setShowUpload] = useState(false);
+  useEffect(() => {
+    setShowUpload(!documents.length);
+  }, [documents.length]);
+
+  if (showUpload) {
     return (
       <div
         className="workspace-container"
@@ -167,7 +169,15 @@ export default function Workspace({ project }) {
           zIndex: 1,
         }}
       >
-        <MultiFileUploadBox onConfirm={handleFilesUploaded} error={uploadError} />
+        <MultiFileUploadBox 
+          onConfirm={handleFilesUploaded} 
+          error={uploadError} 
+          onUploadComplete={() => {
+            setShowUpload(false);
+            setTimeout(() => fetchDocs(), 100);
+          }}
+          projectId={project?._id || project?.id}
+        />
       </div>
     );
   }
@@ -209,6 +219,7 @@ export default function Workspace({ project }) {
         <div style={{ flex: 1, position: 'relative', height: '100%', minHeight: 0, background: '#fff', overflow: 'hidden' }}>
           <DocumentViewer 
             document={selectedDoc ? { ...selectedDoc, url: getDisplayUrl(selectedDoc) } : null}
+            projectId={project?._id || project?.id}
             selectedPage={selectedPage}
             zoom={zoom}
             onZoomChange={setZoom}

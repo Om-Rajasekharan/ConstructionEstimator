@@ -11,6 +11,7 @@ const PORT = process.env.PORT || 5001;
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
+  'https://precon-red.vercel.app/',
 ];
 
 app.use(cors({

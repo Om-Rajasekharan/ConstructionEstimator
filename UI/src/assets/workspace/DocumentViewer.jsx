@@ -14,7 +14,7 @@ async function fetchManifest(url) {
 }
 
 
-export default function DocumentViewer({ document: pdfDocument, selectedPage, zoom, onZoomChange }) {
+export default function DocumentViewer({ document: pdfDocument, projectId, selectedPage, zoom, onZoomChange }) {
   const canvasRef = useRef(null);
   const renderTaskRef = useRef(null);
   const [loading, setLoading] = useState(false);
@@ -25,6 +25,14 @@ export default function DocumentViewer({ document: pdfDocument, selectedPage, zo
   let pageNumber = selectedPage || 1;
   let docUrl = pdfDocument?.url;
   let docName = pdfDocument?.name;
+
+  let docId = pdfDocument?.id || pdfDocument?._id || '';
+  if (pdfDocument?.files && Array.isArray(pdfDocument.files)) {
+    const found = pdfDocument.files.find(f => f._id === docId);
+    if (!found && pdfDocument.files.length > 0) {
+      docId = pdfDocument.files[0]._id;
+    }
+  }
 
   const [imgPage, setImgPage] = useState(1);
 
@@ -280,8 +288,6 @@ export default function DocumentViewer({ document: pdfDocument, selectedPage, zo
                 {manifestLoading && <span style={{ color: '#888', position: 'absolute', left: 16, top: 16, pointerEvents: 'auto' }}>Loading manifest...</span>}
                 {manifestError && <span style={{ color: 'red', position: 'absolute', left: 16, top: 16, pointerEvents: 'auto' }}>{manifestError}</span>}
                 {imageList && imageList.length > 0 && imgPage >= 1 && imgPage <= imageList.length ? (() => {
-                  const projectId = pdfDocument.projectId || pdfDocument.project_id || pdfDocument.project || '6865a0712021b93fb2e80968';
-                  const docId = pdfDocument.id || pdfDocument._id || '';
                   const imageUrl = `${import.meta.env.VITE_API_URL}/api/image/${projectId}/${docId}/${imgPage}`;
                   const [imgLoading, setImgLoading] = React.useState(true);
                   const [imgError, setImgError] = React.useState('');
