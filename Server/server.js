@@ -33,6 +33,7 @@ app.use('/api/projects', require('./routes/projects'));
 app.use('/api/postresponse', require('./routes/postresponse'));
 app.use('/api/conversation', require('./routes/conversation'));
 app.use('/api/image', require('./routes/imageproxy'));
+app.use('/api/imagemasks', require('./routes/imagemasks'));
 
 mongoose.connect(process.env.MONGO_DB_URI, {
   useNewUrlParser: true,

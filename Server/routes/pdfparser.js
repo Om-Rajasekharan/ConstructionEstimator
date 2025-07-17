@@ -7,6 +7,8 @@ const { Storage } = require('@google-cloud/storage');
 const Project = require('../models/Project');
 const User = require('../models/User');
 const projectsRoutes = require('./projects');
+const { execFile } = require('child_process');
+const visionScript = path.join(__dirname, '../prep/vision_text.py');
 
 const router = express.Router();
 
@@ -135,7 +137,7 @@ router.post('/processPdf', authUser, upload.single('pdf'), async (req, res) => {
   if (!project) return res.status(404).json({ error: 'Project not found' });
 
   const pdfPath = req.file.path;
-  const gcsPrefix = `project_${projectId}/${Date.now()}_${req.file.originalname.replace(/\\.[^/.]+$/, '')}`;
+  const gcsPrefix = `project_${projectId}/${Date.now()}_${req.file.originalname.replace(/\.[^/.]+$/, '')}`;
   const py = spawn('python', [
     path.join(__dirname, '../prep/pdf_to_image_and_gcs.py'),
     pdfPath,
@@ -152,7 +154,7 @@ router.post('/processPdf', authUser, upload.single('pdf'), async (req, res) => {
     stderrData += data.toString();
   });
   py.on('close', async (code) => {
-    fs.unlink(pdfPath, () => {});
+    fs.unlink(pdfPath, () => { console.log(`[PDFPARSE] Deleted local PDF: ${pdfPath}`); });
 
     let manifest = [];
     const lines = stdoutData.split(/\r?\n/).filter(Boolean);
@@ -161,6 +163,65 @@ router.post('/processPdf', authUser, upload.single('pdf'), async (req, res) => {
         manifest = JSON.parse(lines[i]);
         break;
       } catch {}
+    }
+
+    // --- Per-page text extraction and GCS upload ---
+    for (const page of manifest) {
+      const gcsImageUrl = page;
+      const imageFileName = path.basename(gcsImageUrl);
+      const localImagePath = path.join(__dirname, '../uploads', `temp_${Date.now()}_${imageFileName}`);
+      
+      try {
+        console.log(`[PDFPARSE] Processing page: ${gcsImageUrl}`);
+        // 1. Download image from GCS to local
+        const imageBlob = bucket.file(gcsImageUrl.replace(`gs://${bucket.name}/`, ''));
+        await imageBlob.download({ destination: localImagePath });
+        console.log(`[PDFPARSE] Downloaded image to: ${localImagePath}`);
+        
+        // 2. Extract text using vision_text.py
+        let extractedText = '';
+        try {
+          console.log(`[PDFPARSE] Extracting text from: ${localImagePath}`);
+          extractedText = await new Promise((resolve, reject) => {
+            execFile('python', [visionScript, localImagePath], (error, stdout, stderr) => {
+              if (stderr) {
+                console.error(`[PDFPARSE][PYTHON STDERR]: ${stderr}`);
+              }
+              if (error) {
+                console.error(`[PDFPARSE] Text extraction error for ${localImagePath}:`, error);
+                return reject(error);
+              }
+              const match = stdout.match(/--- Extracted Text ---\s*([\s\S]*)/);
+              resolve(match ? match[1].trim() : '');
+            });
+          });
+          console.log(`[PDFPARSE] Extracted text length: ${extractedText.length}`);
+        } catch (e) {
+          console.error('[PDFPARSE] Text extraction failed:', e);
+          extractedText = '';
+        }
+        
+        // 3. Save text as JSON to GCS
+        const textFileName = imageFileName.replace('.png', '.json');
+        const gcsTextFile = bucket.file(`${gcsPrefix}/${textFileName}`);
+        const textJson = JSON.stringify({ text: extractedText });
+        await gcsTextFile.save(Buffer.from(textJson, 'utf8'), { contentType: 'application/json' });
+        const gcsTextUrl = `gs://${bucket.name}/${gcsPrefix}/${textFileName}`;
+        console.log(`[PDFPARSE] Uploaded text JSON to: ${gcsTextUrl}`);
+
+        const pageIndex = manifest.indexOf(page);
+        manifest[pageIndex] = {
+          imageGcsUrl: page,
+          textGcsUrl: gcsTextUrl
+        };
+        console.log(`[PDFPARSE] Updated manifest for page index ${pageIndex}`);
+
+        fs.unlink(localImagePath, () => {});
+        console.log(`[PDFPARSE] Deleted local image: ${localImagePath}`);
+        
+      } catch (e) {
+        console.error('[PDFPARSE] Failed to process page:', page, e);
+      }
     }
 
     const manifestFile = bucket.file(`${gcsPrefix}/manifest.json`);

@@ -6,18 +6,27 @@ import DocumentList from './DocumentList';
 import DocumentViewer from './DocumentViewer';
 import FileUploadBox from './FileUploadBox';
 import MultiFileUploadBox from './MultiFileUploadBox';
-import Conversation from '../components/conversation';
+import Conversation from '../components/Conversation';
+import Tools from './Tools';
+import FloorplanMasker from './vision/floorplans';
+import BlueprintMaskToggle from './vision/BlueprintMaskToggle';
 
 export default function Workspace({ project }) {
+  // Mask toggle state and mask image URL for DocumentViewer
+  const [showMask, setShowMask] = useState(false);
+  const [maskImgUrl, setMaskImgUrl] = useState(null);
   const [documents, setDocuments] = useState([]);
   const [selectedDocId, setSelectedDocId] = useState(null);
   const [uploadError, setUploadError] = useState('');
   const [collapsed, setCollapsed] = useState(false);
   const [zoom, setZoom] = useState(1.5);
   const [showAI, setShowAI] = useState(false);
-  const [aiWindowPos, setAiWindowPos] = useState({ x: 80, y: 120 });
+  const [aiWindowPos, setAiWindowPos] = useState({ x: 300, y: 120 });
   const [draggingAI, setDraggingAI] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [activeTool, setActiveTool] = useState('pan');
+  const [showMasker, setShowMasker] = useState(false);
+  const [maskExists, setMaskExists] = useState(false);
 
   const fetchDocs = async () => {
     if (!project) return;
@@ -86,6 +95,36 @@ export default function Workspace({ project }) {
       }
     }
   }
+
+  useEffect(() => {
+    setMaskImgUrl(null);
+  }, [selectedDoc, selectedPage]);
+
+  useEffect(() => {
+    async function checkMask() {
+      setMaskExists(false);
+      if (selectedDoc && selectedPage) {
+        const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+        const maskCheckUrl = `${API_BASE}/api/image/${project?._id || project?.id}/${selectedDoc.id}/${selectedPage}/mask`;
+        const token = localStorage.getItem('token');
+        try {
+          const res = await fetch(maskCheckUrl, {
+            method: 'GET',
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+            credentials: 'include',
+          });
+          if (res.ok && res.headers.get('Content-Type')?.includes('image')) {
+            setMaskExists(true);
+          } else {
+            setMaskExists(false);
+          }
+        } catch {
+          setMaskExists(false);
+        }
+      }
+    }
+    checkMask();
+  }, [selectedDoc, selectedPage, project]);
 
   function getDisplayUrl(doc) {
     if (!doc || !doc.url) return null;
@@ -197,14 +236,37 @@ export default function Workspace({ project }) {
         display: 'flex',
         flexDirection: 'column',
         zIndex: 1,
+        cursor: (() => {
+          if (activeTool === 'drawing') return 'url("data:image/svg+xml,%3Csvg width=\'32\' height=\'32\' viewBox=\'0 0 32 32\' fill=\'none\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M6 26L26 6L28 8L8 28L6 26Z\' fill=\'%231976d2\' stroke=\'%23333\' stroke-width=\'2\'/%3E%3Crect x=\'4\' y=\'24\' width=\'4\' height=\'4\' fill=\'%23ffd600\' stroke=\'%23333\' stroke-width=\'1\'/%3E%3C/svg%3E") 0 32, pointer';
+          if (activeTool === 'highlight') return 'url("data:image/svg+xml,%3Csvg width=\'32\' height=\'32\' viewBox=\'0 0 32 32\' fill=\'none\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Crect x=\'6\' y=\'20\' width=\'20\' height=\'6\' rx=\'2\' fill=\'%23ffeb3b\' stroke=\'%23ffd600\' stroke-width=\'2\'/%3E%3Crect x=\'10\' y=\'6\' width=\'12\' height=\'14\' rx=\'3\' fill=\'%23fffde7\' stroke=\'%23ffd600\' stroke-width=\'2\'/%3E%3C/svg%3E") 0 32, pointer';
+          if (activeTool === 'stickyNote') return 'url("data:image/svg+xml,%3Csvg width=\'32\' height=\'32\' viewBox=\'0 0 32 32\' fill=\'none\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Crect x=\'4\' y=\'4\' width=\'24\' height=\'24\' rx=\'4\' fill=\'%23fffbe6\' stroke=\'%23ffd600\' stroke-width=\'2\'/%3E%3Crect x=\'8\' y=\'8\' width=\'16\' height=\'16\' rx=\'2\' fill=\'%23ffe066\'/%3E%3C/svg%3E") 0 32, pointer';
+          return 'default';
+        })(),
       }}
     >
-      <div style={{ height: 36, background: '#f7f7fa', borderBottom: '1px solid #eee', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 16px', gap: 8 }}>
-        <span style={{ fontSize: 13, color: '#888', marginRight: 8 }}>Zoom:</span>
-        <button onClick={() => setZoom(z => Math.max(0.1, +(z - 0.1).toFixed(2)))} style={{ fontSize: 16, padding: '2px 8px', marginRight: 2 }}>−</button>
-        <span style={{ minWidth: 48, textAlign: 'center', color: '#222', fontWeight: 500, fontSize: 15, background: '#f0f0f7', borderRadius: 4, padding: '2px 8px' }}>{Math.round(Math.max(zoom * 100, 10))}%</span>
-        <button onClick={() => setZoom(z => Math.min(5, +(z + 0.1).toFixed(2)))} style={{ fontSize: 16, padding: '2px 8px', marginLeft: 2 }}>+</button>
-        <button onClick={() => setZoom(1)} style={{ fontSize: 13, padding: '2px 10px', marginLeft: 12, background: '#f0f0f7', border: '1px solid #ccc', borderRadius: 4, color: '#444', cursor: 'pointer' }}>Reset</button>
+      <div style={{ height: 36, background: '#f7f7fa', borderBottom: '1px solid #eee', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', gap: 8, position: 'relative' }}>
+        <Tools activeTool={activeTool} setActiveTool={setActiveTool} />
+        {maskExists && selectedDoc && selectedPage && (
+          <div style={{ position: 'absolute', left: '50%', top: 0, transform: 'translateX(-50%)', zIndex: 10 }}>
+            <BlueprintMaskToggle
+              projectId={project?._id || project?.id}
+              docId={selectedDoc.id}
+              pageNum={selectedPage}
+              blueprintImgSrc={selectedDoc.pageImages && selectedDoc.pageImages[selectedPage - 1]?.url ? selectedDoc.pageImages[selectedPage - 1].url : getDisplayUrl(selectedDoc)}
+              style={{ marginTop: 2 }}
+              showMask={showMask}
+              setShowMask={setShowMask}
+              setMaskImgUrl={setMaskImgUrl}
+            />
+          </div>
+        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 13, color: '#888', marginRight: 8 }}>Zoom:</span>
+          <button onClick={() => setZoom(z => Math.max(0.1, +(z - 0.1).toFixed(2)))} style={{ fontSize: 16, padding: '2px 8px', marginRight: 2 }}>−</button>
+          <span style={{ minWidth: 48, textAlign: 'center', color: '#222', fontWeight: 500, fontSize: 15, background: '#f0f0f7', borderRadius: 4, padding: '2px 8px' }}>{Math.round(Math.max(zoom * 100, 10))}%</span>
+          <button onClick={() => setZoom(z => Math.min(5, +(z + 0.1).toFixed(2)))} style={{ fontSize: 16, padding: '2px 8px', marginLeft: 2 }}>+</button>
+          <button onClick={() => setZoom(1)} style={{ fontSize: 13, padding: '2px 10px', marginLeft: 12, background: '#f0f0f7', border: '1px solid #ccc', borderRadius: 4, color: '#444', cursor: 'pointer' }}>Reset</button>
+        </div>
       </div>
       <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
         <div style={{ width: collapsed ? 48 : 250, transition: 'width 0.2s', borderRight: '1px solid #bfc2c7', background: '#f5f6fa', height: '100%' }}>
@@ -223,79 +285,53 @@ export default function Workspace({ project }) {
             selectedPage={selectedPage}
             zoom={zoom}
             onZoomChange={setZoom}
+            activeTool={activeTool}
+            toggledImgSrc={showMask ? maskImgUrl : null}
           />
         </div>
       </div>
+      <div style={{ position: 'fixed', right: 36, bottom: 92, zIndex: 2002 }}>
+        {selectedDoc && selectedPage && (
+          <FloorplanMasker
+            imageUrl={selectedDoc.pageImages && selectedDoc.pageImages[selectedPage - 1]?.url ? selectedDoc.pageImages[selectedPage - 1].url : getDisplayUrl(selectedDoc)}
+            projectId={project?._id || project?.id}
+            docId={selectedDoc.id}
+            pageNum={selectedPage}
+            style={{ marginBottom: 0, boxShadow: '0 4px 24px rgba(0,0,0,0.10)', borderRadius: 14, background: '#fff' }}
+          />
+        )}
+      </div>
+
       <button
         onClick={() => setShowAI(v => !v)}
         style={{
           position: 'fixed',
           right: 32,
           bottom: 32,
-          zIndex: 1002,
-          background: '#1976d2',
+          zIndex: 2002,
+          background: 'linear-gradient(135deg, rgba(30,30,30,0.92) 0%, rgba(60,60,60,0.88) 100%)',
           color: '#fff',
-          border: 'none',
-          borderRadius: 24,
+          border: '1.5px solid rgba(255,255,255,0.10)',
+          borderRadius: 18,
           padding: '12px 28px',
           fontSize: 18,
           fontWeight: 700,
-          boxShadow: '0 2px 8px #1976d244',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.28)',
+          backdropFilter: 'blur(12px)',
           cursor: 'pointer',
+          transition: 'all 0.2s',
         }}
       >
-        {showAI ? 'Close AI' : 'Ask AI'}
+        {showAI ? '✕' : 'Ask AI'}
       </button>
       {showAI && (
-        <div
-          style={{
-            position: 'fixed',
-            left: aiWindowPos.x,
-            top: aiWindowPos.y,
-            width: 440,
-            minHeight: 340,
-            maxHeight: '80vh',
-            background: '#f7fafd',
-            border: '2px solid #1976d2',
-            borderRadius: 16,
-            boxShadow: '0 8px 32px #1976d244',
-            zIndex: 1003,
-            display: 'flex',
-            flexDirection: 'column',
-            resize: 'both',
-            overflow: 'hidden',
-          }}
-          onMouseMove={handleAIDrag}
-          onMouseUp={handleAIDragEnd}
-          onMouseLeave={handleAIDragEnd}
-        >
-          <div
-            style={{
-              cursor: 'move',
-              background: 'linear-gradient(90deg, #1976d2 0%, #21a1e1 100%)',
-              color: '#fff',
-              padding: '12px 20px',
-              borderTopLeftRadius: 14,
-              borderTopRightRadius: 14,
-              fontWeight: 700,
-              fontSize: 18,
-              userSelect: 'none',
-              letterSpacing: 0.2,
-              boxShadow: '0 2px 8px #1976d244',
-            }}
-            onMouseDown={handleAIDragStart}
-          >
-            AI Assistant
-          </div>
-          <div style={{ flex: 1, padding: 18, overflow: 'auto', background: 'none', color: '#232526' }}>
-            <Conversation
-              aiResponsePath={project?.aiUrl || ''}
-              projectId={project?._id || project?.id}
-              docId={selectedDoc ? selectedDoc.id : null}
-              pageNum={selectedPage || null}
-            />
-          </div>
-        </div>
+        <Conversation
+          aiResponsePath={project?.aiUrl || ''}
+          projectId={project?._id || project?.id}
+          docId={selectedDoc ? selectedDoc.id : null}
+          pageNum={selectedPage || null}
+          onClose={() => setShowAI(false)}
+        />
       )}
       <style>{`
         .workspace-container *::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }

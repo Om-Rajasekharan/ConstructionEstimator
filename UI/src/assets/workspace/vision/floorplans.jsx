@@ -1,86 +1,63 @@
 import React, { useState } from 'react';
 
-async function segmentFloorplan(imageFile) {
-  const formData = new FormData();
-  formData.append('file', imageFile);
-  const res = await fetch('/api/vision/segment-floorplan', {
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+
+// Helper to fetch the mask overlay from backend
+async function fetchMaskOverlay({ projectId, docId, pageNum }) {
+  const res = await fetch(`${API_BASE}/api/imagemasks/mask-page`, {
     method: 'POST',
-    body: formData,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ projectId, docId, pageNum })
   });
-  if (!res.ok) throw new Error('Failed to segment floorplan');
+  if (!res.ok) throw new Error('Failed to generate mask');
   return await res.json();
 }
 
-export default function FloorplanSegmenter() {
-  const [image, setImage] = useState(null);
-  const [areas, setAreas] = useState([]);
+export default function FloorplanMasker({
+  imageUrl,
+  projectId,
+  docId,
+  pageNum,
+  style
+}) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleFileChange = e => {
-    setImage(e.target.files[0]);
-    setAreas([]);
-    setError('');
-  };
-
-  const handleSegment = async () => {
-    if (!image) return;
+  const handleMask = async () => {
     setLoading(true);
     setError('');
     try {
-      const result = await segmentFloorplan(image);
-      setAreas(result.areas || []);
-    } catch (err) {
-      setError('Segmentation failed');
+      await fetchMaskOverlay({ projectId, docId, pageNum });
+    } catch (e) {
+      setError('Failed to generate mask');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={{ padding: 24 }}>
-      <h2>Floorplan Room Segmentation (AI)</h2>
-      <input type="file" accept="image/*" onChange={handleFileChange} />
-      <button onClick={handleSegment} disabled={!image || loading} style={{ marginLeft: 8 }}>
-        {loading ? 'Analyzing...' : 'Segment Floorplan'}
+    <div style={{ position: 'relative', ...style }}>
+      <button
+        onClick={handleMask}
+        disabled={loading}
+        style={{
+          marginTop: 12,
+          background: 'linear-gradient(90deg, #1e3c72 0%, #2a5298 100%)',
+          color: '#fff',
+          border: 'none',
+          borderRadius: 10,
+          padding: '10px 28px',
+          fontSize: 16,
+          fontWeight: 600,
+          letterSpacing: 0.5,
+          boxShadow: '0 2px 12px rgba(30,60,114,0.10)',
+          cursor: loading ? 'not-allowed' : 'pointer',
+          transition: 'all 0.18s',
+        }}
+      >
+        {loading ? 'Generating Mask...' : 'Blueprint Mask'}
       </button>
       {error && <div style={{ color: 'red', marginTop: 8 }}>{error}</div>}
-      <div style={{ marginTop: 24 }}>
-        {image && (
-          <div style={{ position: 'relative', display: 'inline-block' }}>
-            <img
-              src={URL.createObjectURL(image)}
-              alt="Floorplan"
-              style={{ maxWidth: 600, maxHeight: 400, border: '1px solid #ccc' }}
-            />
-            <svg
-              style={{ position: 'absolute', left: 0, top: 0, pointerEvents: 'none' }}
-              width={600}
-              height={400}
-            >
-              {areas.map((area, i) => (
-                <polygon
-                  key={i}
-                  points={area.polygon.map(pt => pt.join(',')).join(' ')}
-                  fill={area.color || 'rgba(0,128,255,0.2)'}
-                  stroke={area.color || '#0080ff'}
-                  strokeWidth={2}
-                />
-              ))}
-            </svg>
-          </div>
-        )}
-        {areas.length > 0 && (
-          <div style={{ marginTop: 16 }}>
-            <h4>Detected Areas:</h4>
-            <ul>
-              {areas.map((area, i) => (
-                <li key={i}>{area.type || 'Room'} (points: {area.polygon.length})</li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </div>
     </div>
   );
 }
