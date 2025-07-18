@@ -53,7 +53,7 @@ router.post('/signup', async (req, res) => {
   const hash = await bcrypt.hash(password, 10);
   const user = await User.create({ email, password: hash, name });
   const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '7d' });
-  res.json({ token, user: { email: user.email, name: user.name } });
+  res.json({ token, user: { email: user.email, name: user.name, company: user.company || '' } });
 });
 
 // User signin route
@@ -64,7 +64,7 @@ router.post('/signin', async (req, res) => {
   const valid = await bcrypt.compare(password, user.password);
   if (!valid) return res.status(401).json({ error: 'Invalid credentials' });
   const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '7d' });
-  res.json({ token, user: { email: user.email, name: user.name } });
+  res.json({ token, user: { email: user.email, name: user.name, company: user.company || '' } });
 });
 
 // Google OAuth login route
@@ -82,17 +82,39 @@ router.get('/google/callback',
 // Complete profile for Google sign-in users
 router.post('/complete-profile', async (req, res) => {
   try {
+    console.log('--- /complete-profile DEBUG ---');
+    console.log('Headers:', req.headers);
+    console.log('Body:', req.body);
     const authHeader = req.headers.authorization;
-    if (!authHeader) return res.status(401).json({ error: 'No token provided' });
+    if (!authHeader) {
+      console.log('No Authorization header');
+      return res.status(401).json({ error: 'No token provided' });
+    }
     const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
+    console.log('Extracted token:', token);
+    let decoded;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+      console.log('Decoded JWT:', decoded);
+    } catch (jwtErr) {
+      console.log('JWT verification error:', jwtErr);
+      return res.status(400).json({ error: 'Invalid or expired token' });
+    }
     const userId = decoded.userId;
     const { name, company } = req.body;
-    if (!name || !company) return res.status(400).json({ error: 'Missing fields' });
+    if (!name || !company) {
+      console.log('Missing fields:', { name, company });
+      return res.status(400).json({ error: 'Missing fields' });
+    }
     const user = await User.findByIdAndUpdate(userId, { name, company }, { new: true });
-    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (!user) {
+      console.log('User not found for userId:', userId);
+      return res.status(404).json({ error: 'User not found' });
+    }
+    console.log('Profile updated for user:', user.email);
     res.json({ user: { email: user.email, name: user.name, company: user.company } });
   } catch (err) {
+    console.log('General error in /complete-profile:', err);
     res.status(400).json({ error: 'Invalid or expired token' });
   }
 });

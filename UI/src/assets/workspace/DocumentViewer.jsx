@@ -7,6 +7,7 @@ import DrawingTool from './tools/drawing';
 import HighlightTool from './tools/highlight';
 import StickyNoteRender from './tools/stickyNoteRender.jsx';
 import DrawingRender from './tools/DrawingRender.jsx';
+import BlueprintMaskToggle from './vision/BlueprintMaskToggle.jsx';
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 
 async function fetchManifest(url) {
@@ -488,131 +489,37 @@ export default function DocumentViewer({ document: pdfDocument, projectId, selec
               onGestureChange={e => e.preventDefault()}
               onGestureEnd={e => e.preventDefault()}
             >
-              <div
-                style={{
-                  position: 'absolute',
-                  left: 0,
-                  top: 0,
-                  width: '100%',
-                  height: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  pointerEvents: 'none',
-                }}
-              >
-                {manifestLoading && <span style={{ color: '#888', position: 'absolute', left: 16, top: 16, pointerEvents: 'auto' }}>Loading manifest...</span>}
-                {manifestError && <span style={{ color: 'red', position: 'absolute', left: 16, top: 16, pointerEvents: 'auto' }}>{manifestError}</span>}
-                {imageList && imageList.length > 0 && imgPage >= 1 && imgPage <= imageList.length ? (
-                  <>
-                    {imgLoading && <span style={{ color: '#888', position: 'absolute', left: 16, top: 40, pointerEvents: 'auto' }}>Loading image...</span>}
-                    {imgError && <span style={{ color: 'red', position: 'absolute', left: 16, top: 40, pointerEvents: 'auto' }}>{imgError}</span>}
-                    {imgSrc && (() => {
-                      const maxW = window.innerWidth;
-                      const maxH = window.innerHeight * 0.9;
-                      const naturalW = imgNaturalSize.width;
-                      const naturalH = imgNaturalSize.height;
-                      let scale = 1;
-                      if (naturalW && naturalH) {
-                        scale = Math.min(maxW / naturalW, maxH / naturalH, 1);
-                      }
-                      const displayW = naturalW * scale * imgZoom;
-                      const displayH = naturalH * scale * imgZoom;
-                      return (
-                        <div
-                          style={{
-                            position: 'absolute',
-                            left: `calc(50% + ${imgPan.x}px)`,
-                            top: `calc(50% + ${imgPan.y}px)`,
-                            transform: `translate(-50%, -50%)`,
-                            transition: imgLoading ? 'none' : 'width 0.15s, height 0.15s',
-                            boxShadow: '0 2px 8px #0001',
-                            background: '#fff',
-                            cursor: 'inherit',
-                            userSelect: 'none',
-                            pointerEvents: 'auto',
-                            width: displayW,
-                            height: displayH,
-                            maxWidth: maxW,
-                            maxHeight: maxH,
-                          }}
-                          onMouseDown={handleImageMouseDown}
-                        >
-                          <img
-                            src={imgSrc}
-                            alt={`Page ${imgPage}`}
-                            style={{
-                              display: 'block',
-                              width: displayW,
-                              height: displayH,
-                              objectFit: 'contain',
-                              pointerEvents: 'none',
-                              userSelect: 'none',
-                              WebkitUserSelect: 'none',
-                              MozUserSelect: 'none',
-                              msUserSelect: 'none',
-                              opacity: imgLoading ? 0.5 : 1,
-                              cursor: 'inherit',
-                            }}
-                            draggable={false}
-                            onLoad={e => {
-                              setImgNaturalSize({
-                                width: e.target.naturalWidth,
-                                height: e.target.naturalHeight
-                              });
-                            }}
-                          />
-                          {activeTool === 'highlight' && drawingHighlight && (() => {
-                            const { x0, y0, x1, y1 } = drawingHighlight;
-                            const x = Math.min(x0, x1);
-                            const y = Math.min(y0, y1);
-                            const width = Math.abs(x1 - x0);
-                            const height = Math.abs(y1 - y0);
-                            return (
-                              <div
-                                style={{
-                                  position: 'absolute',
-                                  left: `${x * displayW}px`,
-                                  top: `${y * displayH}px`,
-                                  width: `${width * displayW}px`,
-                                  height: `${height * displayH}px`,
-                                  background: '#ffeb3b',
-                                  opacity: 0.25,
-                                  border: '1.5px dashed #ffd600',
-                                  borderRadius: 4,
-                                  pointerEvents: 'none',
-                                }}
-                              />
-                            );
-                          })()}
-                          {/* Sticky notes for image mode */}
-                          <StickyNoteRender
-                            stickyNotes={stickyNotes}
-                            setStickyNotes={setStickyNotes}
-                            isImage={true}
-                            displayW={displayW}
-                            displayH={displayH}
-                            page={imgPage}
-                          />
-                          {/* Drawing overlay for image mode */}
-                          <DrawingRender
-                            drawingPaths={drawingPaths}
-                            setDrawingPaths={setDrawingPaths}
-                            drawingCurrentPath={drawingCurrentPath}
-                            setDrawingCurrentPath={setDrawingCurrentPath}
-                            displayW={displayW}
-                            displayH={displayH}
-                            page={imgPage}
-                            isImage={true}
-                          />
-                        </div>
-                      );
-                    })()}
-                  </>
-                ) : (!manifestLoading && !manifestError) ? (
-                  <span style={{ color: '#888', position: 'absolute', left: 16, top: 16, pointerEvents: 'auto' }}>No image for this page</span>
-                ) : null}
-              </div>
+              {/* Mask and polygons overlay for image docs */}
+              <BlueprintMaskToggle
+                projectId={projectId}
+                docId={docId}
+                pageNum={imgPage}
+                blueprintImgSrc={imgSrc}
+                style={{ width: '100%', height: '100%' }}
+                showMask={true}
+                setShowMask={() => {}}
+                setMaskImgUrl={() => {}}
+              />
+              {/* Sticky notes for image mode */}
+              <StickyNoteRender
+                stickyNotes={stickyNotes}
+                setStickyNotes={setStickyNotes}
+                isImage={true}
+                displayW={imgNaturalSize.width}
+                displayH={imgNaturalSize.height}
+                page={imgPage}
+              />
+              {/* Drawing overlay for image mode */}
+              <DrawingRender
+                drawingPaths={drawingPaths}
+                setDrawingPaths={setDrawingPaths}
+                drawingCurrentPath={drawingCurrentPath}
+                setDrawingCurrentPath={setDrawingCurrentPath}
+                displayW={imgNaturalSize.width}
+                displayH={imgNaturalSize.height}
+                page={imgPage}
+                isImage={true}
+              />
             </div>
           ) : pdfDocument.type === 'application/pdf' ? (
             <div
@@ -687,12 +594,13 @@ export default function DocumentViewer({ document: pdfDocument, projectId, selec
                 <DrawingRender
                   drawingPaths={drawingPaths}
                   setDrawingPaths={setDrawingPaths}
-                  drawingCurrentPath={drawingCurrentPath}
+                  drawingCurrentPath={drawingCurrentPath && typeof drawingCurrentPath === 'object' ? drawingCurrentPath : null}
                   setDrawingCurrentPath={setDrawingCurrentPath}
                   displayW={FIXED_CANVAS_WIDTH * zoom}
                   displayH={canvasRef.current ? canvasRef.current.height : 1}
                   page={pageNumber}
                   isImage={false}
+                  activeTool={activeTool}
                 />
                 {activeTool === 'highlight' && drawingHighlight && (() => {
                   const { x0, y0, x1, y1 } = drawingHighlight;

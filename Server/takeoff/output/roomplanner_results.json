@@ -1,6 +1,6 @@
 {
-  "inference_id": "a0d251d0-c656-4ccf-b077-895f33bc49b7",
-  "time": 1.1944737789999635,
+  "inference_id": "f8b96361-87d1-48c5-9d1e-f54c1178a267",
+  "time": 1.2390175599999793,
   "image": {
     "width": 8400,
     "height": 6000
@@ -68,7 +68,7 @@
         }
       ],
       "class_id": 0,
-      "detection_id": "07293e7d-37bb-47cb-a9cf-c33d2bb6768d"
+      "detection_id": "d0fbddcc-d309-4654-9190-fd5b9bab7f86"
     },
     {
       "x": 6430.5,
@@ -96,7 +96,7 @@
         }
       ],
       "class_id": 0,
-      "detection_id": "ae247a33-4729-475e-b2a5-d82d6a838c3f"
+      "detection_id": "b861165d-68ba-424b-8b23-e522808b84bf"
     },
     {
       "x": 3806.5,
@@ -156,7 +156,7 @@
         }
       ],
       "class_id": 0,
-      "detection_id": "078224ec-7d5d-49b1-8a1b-4df8ae876a89"
+      "detection_id": "08e56257-4b3b-4157-a1d7-68dc1fdda2de"
     },
     {
       "x": 4514.0,
@@ -2480,7 +2480,7 @@
         }
       ],
       "class_id": 0,
-      "detection_id": "0639b7ff-ca7a-4329-9280-0e24ca1786f5"
+      "detection_id": "bc7a1587-75e8-4aad-8afd-f5da356b5e56"
     },
     {
       "x": 5747.5,
@@ -2520,7 +2520,7 @@
         }
       ],
       "class_id": 0,
-      "detection_id": "bc4d23cf-a9d5-43ad-9bf5-896f4f1f3765"
+      "detection_id": "d6cc46f0-8e18-4f25-adeb-9e1e7cbaea33"
     },
     {
       "x": 6880.0,
@@ -2548,7 +2548,7 @@
         }
       ],
       "class_id": 0,
-      "detection_id": "69474b1d-f43f-48c3-b20f-778755fbef76"
+      "detection_id": "b95cb529-61b6-4017-846f-8053d4db2419"
     }
   ]
 }

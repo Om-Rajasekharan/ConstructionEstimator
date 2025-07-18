@@ -11,7 +11,7 @@ import React from 'react';
  * @param {number} page - Current page number
  * @param {boolean} isImage - True if rendering for image, false for PDF
  */
-export default function DrawingRender({ drawingPaths, setDrawingPaths, drawingCurrentPath, setDrawingCurrentPath, displayW, displayH, page, isImage }) {
+export default function DrawingRender({ drawingPaths, setDrawingPaths, drawingCurrentPath, setDrawingCurrentPath, displayW, displayH, page, isImage, activeTool }) {
   const canvasRef = React.useRef(null);
 
   // Draw all paths for the current page
@@ -39,6 +39,7 @@ export default function DrawingRender({ drawingPaths, setDrawingPaths, drawingCu
   }, [drawingPaths, drawingCurrentPath, displayW, displayH, page]);
 
   function handleMouseDown(e) {
+    if (activeTool !== 'drawing') return;
     if (!canvasRef.current) return;
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
@@ -47,6 +48,7 @@ export default function DrawingRender({ drawingPaths, setDrawingPaths, drawingCu
     setDrawingCurrentPath({ page, points: [{ x, y }], color: '#1976d2', width: 2 });
   }
   function handleMouseMove(e) {
+    if (activeTool !== 'drawing') return;
     if (!canvasRef.current || !drawingCurrentPath) return;
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
@@ -55,20 +57,21 @@ export default function DrawingRender({ drawingPaths, setDrawingPaths, drawingCu
     setDrawingCurrentPath(path => path ? { ...path, points: [...path.points, { x, y }] } : null);
   }
   function handleMouseUp() {
+    if (activeTool !== 'drawing') return;
     if (!drawingCurrentPath) return;
     setDrawingPaths(paths => [...paths, drawingCurrentPath]);
     setDrawingCurrentPath(null);
   }
 
   React.useEffect(() => {
-    if (!drawingCurrentPath) return;
+    if (activeTool !== 'drawing' || !drawingCurrentPath) return;
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [drawingCurrentPath]);
+  }, [drawingCurrentPath, activeTool]);
 
   return (
     <canvas
@@ -81,10 +84,10 @@ export default function DrawingRender({ drawingPaths, setDrawingPaths, drawingCu
         top: 0,
         width: Math.round(displayW) + 'px',
         height: Math.round(displayH) + 'px',
-        pointerEvents: 'auto',
+        pointerEvents: activeTool === 'drawing' ? 'auto' : 'none',
         zIndex: 5
       }}
-      onMouseDown={handleMouseDown}
+      onMouseDown={activeTool === 'drawing' ? handleMouseDown : undefined}
     />
   );
 }

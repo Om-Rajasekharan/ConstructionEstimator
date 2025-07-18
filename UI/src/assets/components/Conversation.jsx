@@ -1,11 +1,35 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ReactMarkdown from 'react-markdown';
 import './Conversation.css';
 
+
+// Advanced spinner animation
 const Spinner = () => (
-  <div className="ai-spinner">
-    <div className="spinner-ring"></div>
-    <div className="spinner-ring"></div>
-    <div className="spinner-ring"></div>
+  <div className="ai-advanced-spinner" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 48 }}>
+    <svg width="48" height="48" viewBox="0 0 48 48" style={{ marginRight: 12 }}>
+      <defs>
+        <linearGradient id="spinner-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#a18cd1" />
+          <stop offset="100%" stopColor="#fbc2eb" />
+        </linearGradient>
+      </defs>
+      <circle cx="24" cy="24" r="20" stroke="url(#spinner-gradient)" strokeWidth="6" fill="none" strokeDasharray="100 60" strokeDashoffset="0">
+        <animateTransform attributeName="transform" type="rotate" from="0 24 24" to="360 24 24" dur="1.2s" repeatCount="indefinite" />
+      </circle>
+      <circle cx="24" cy="24" r="10" fill="#232526" opacity="0.18">
+        <animate attributeName="r" values="10;14;10" dur="1.2s" repeatCount="indefinite" />
+      </circle>
+    </svg>
+    <div style={{ fontSize: 22, fontWeight: 600, color: '#a18cd1', letterSpacing: 1, animation: 'pulse 1.2s infinite' }}>
+      Analyzing...
+    </div>
+    <style>{`
+      @keyframes pulse {
+        0% { opacity: 0.7; }
+        50% { opacity: 1; }
+        100% { opacity: 0.7; }
+      }
+    `}</style>
   </div>
 );
 
@@ -14,6 +38,7 @@ const Conversation = ({ aiResponsePath, onAIResponse, projectId, docId, pageNum,
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [conversation, setConversation] = useState([]);
+  const [pendingQuestion, setPendingQuestion] = useState(null);
   const [contextScope, setContextScope] = useState('current-page');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [highlightIdx, setHighlightIdx] = useState(null);
@@ -80,6 +105,7 @@ const Conversation = ({ aiResponsePath, onAIResponse, projectId, docId, pageNum,
     }
     setLoading(true);
     setError(null);
+    setPendingQuestion(prompt);
     try {
       const API_BASE = import.meta.env.VITE_API_URL || '';
       const url = `${API_BASE.replace(/\/$/, '')}/api/conversation/ask`;
@@ -101,6 +127,7 @@ const Conversation = ({ aiResponsePath, onAIResponse, projectId, docId, pageNum,
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'AI request failed');
       if (onAIResponse) onAIResponse(data);
+      setPendingQuestion(null);
       if (data && data.conversation) {
         setConversation(data.conversation);
         setHighlightIdx(data.conversation.length - 1);
@@ -127,6 +154,7 @@ const Conversation = ({ aiResponsePath, onAIResponse, projectId, docId, pageNum,
       }
     } catch (err) {
       setError(err.message);
+      setPendingQuestion(null);
     } finally {
       setLoading(false);
     }
@@ -145,6 +173,13 @@ const Conversation = ({ aiResponsePath, onAIResponse, projectId, docId, pageNum,
       lastEntryRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   }, [conversation, highlightIdx]);
+
+  // Force scroll to bottom when a new question is asked
+  useEffect(() => {
+    if (loading && pendingQuestion && lastEntryRef.current) {
+      lastEntryRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [loading, pendingQuestion]);
 
   const toggleFullscreen = () => {
     setIsFullscreen(!isFullscreen);
@@ -308,7 +343,7 @@ const Conversation = ({ aiResponsePath, onAIResponse, projectId, docId, pageNum,
 
 
 
-          {conversation && conversation.length > 0 && (
+          {((conversation && conversation.length > 0) || (loading && pendingQuestion)) && (
             <div
               className={`conversation-history${isFullscreen ? '' : ' nonfullscreen'}`}
               style={isFullscreen ? {
@@ -401,7 +436,7 @@ const Conversation = ({ aiResponsePath, onAIResponse, projectId, docId, pageNum,
                     }}
                   >
                     <span style={{ opacity: 0.7, fontWeight: 400, fontSize: isFullscreen ? 16 : 13, marginRight: 8 }}>AI</span>
-                    {entry.answer}
+                    <ReactMarkdown>{entry.answer || ''}</ReactMarkdown>
                   </div>
                   {entry.timestamp && (
                     <div
@@ -418,6 +453,63 @@ const Conversation = ({ aiResponsePath, onAIResponse, projectId, docId, pageNum,
                   )}
                 </div>
               ))}
+              {/* Pending question as latest entry */}
+              {loading && pendingQuestion && (
+                <div
+                  className="conversation-item"
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'flex-end',
+                    gap: 6,
+                  }}
+                >
+                  <div
+                    className="conversation-question"
+                    style={{
+                      alignSelf: 'flex-end',
+                      background: 'linear-gradient(90deg, #a18cd1 0%, #fbc2eb 50%, #fad0c4 100%)',
+                      color: '#232526',
+                      fontSize: isFullscreen ? 22 : 17,
+                      fontWeight: 600,
+                      borderRadius: 18,
+                      padding: isFullscreen ? '18px 32px' : '10px 18px',
+                      marginBottom: 2,
+                      maxWidth: '80%',
+                      boxShadow: '0 2px 16px 0 rgba(161,140,209,0.18)',
+                      border: '1.5px solid rgba(161,140,209,0.18)',
+                      backdropFilter: 'blur(6px)',
+                    }}
+                  >
+                    <span style={{ opacity: 0.7, fontWeight: 400, fontSize: isFullscreen ? 16 : 13, marginRight: 8 }}>You</span>
+                    {pendingQuestion}
+                  </div>
+                  <div
+                    className="conversation-answer"
+                    style={{
+                      alignSelf: 'flex-start',
+                      background: 'linear-gradient(90deg, #232526 0%, #414345 100%)',
+                      color: '#fff',
+                      fontSize: isFullscreen ? 22 : 17,
+                      fontWeight: 600,
+                      borderRadius: 18,
+                      padding: isFullscreen ? '18px 32px' : '10px 18px',
+                      marginTop: 2,
+                      maxWidth: '80%',
+                      boxShadow: '0 2px 12px rgba(0,0,0,0.18)',
+                      border: '1.5px solid rgba(60,60,60,0.18)',
+                      backdropFilter: 'blur(6px)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 12,
+                    }}
+                  >
+                    <span style={{ opacity: 0.7, fontWeight: 400, fontSize: isFullscreen ? 16 : 13, marginRight: 8 }}>AI</span>
+                    <span style={{ fontStyle: 'italic', opacity: 0.7 }}>Thinking ...</span>
+                    <Spinner />
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -594,10 +686,7 @@ const Conversation = ({ aiResponsePath, onAIResponse, projectId, docId, pageNum,
           disabled={loading || !prompt.trim()}
         >
           {loading ? (
-            <>
-              <Spinner />
-              Analyzing...
-            </>
+            <Spinner />
           ) : (
             'Ask AI'
           )}

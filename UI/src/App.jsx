@@ -73,7 +73,11 @@ function App() {
     if (token && (!user || !user.token)) {
       fetchUser(token).then(userInfo => {
         if (userInfo) {
-          setUser({ ...userInfo, token });
+          setUser(prev => {
+            const newUser = { ...userInfo, token };
+            console.log('Setting user with token:', newUser);
+            return newUser;
+          });
         } else {
           localStorage.removeItem('token');
           setUser(null);
@@ -255,9 +259,46 @@ function App() {
     }
   `;
 
-  if (window.location.pathname === '/auth-success') return <AuthSuccess onAuth={setUser} />;
-  if (!user) return <SignInUp onAuth={setUser} />;
-  if (user && (!user.name || !user.company)) return <CompleteProfile token={user.token} onComplete={setUser} />;
+  // Debug: log user and token state on every render
+  useEffect(() => {
+    console.log('App user state:', user);
+  }, [user]);
+
+  if (window.location.pathname === '/auth-success') return <AuthSuccess onAuth={userInfo => {
+    // Always save token to localStorage and set user with token
+    if (userInfo && userInfo.token) {
+      localStorage.setItem('token', userInfo.token);
+      setUser(userInfo);
+    } else if (userInfo && userInfo.token === undefined && userInfo.token !== null) {
+      // If token is missing, try to get it from localStorage
+      const token = localStorage.getItem('token');
+      setUser({ ...userInfo, token });
+    } else {
+      setUser(userInfo);
+    }
+  }} />;
+  if (!user) return <SignInUp onAuth={userInfo => {
+    if (userInfo && userInfo.token) {
+      localStorage.setItem('token', userInfo.token);
+      setUser(userInfo);
+    } else if (userInfo && userInfo.token === undefined && userInfo.token !== null) {
+      const token = localStorage.getItem('token');
+      setUser({ ...userInfo, token });
+    } else {
+      setUser(userInfo);
+    }
+  }} />;
+  if (user && (!user.name || !user.company)) return <CompleteProfile token={user.token} onComplete={userInfo => {
+    if (userInfo && userInfo.token) {
+      localStorage.setItem('token', userInfo.token);
+      setUser(userInfo);
+    } else if (userInfo && userInfo.token === undefined && userInfo.token !== null) {
+      const token = localStorage.getItem('token');
+      setUser({ ...userInfo, token });
+    } else {
+      setUser(userInfo);
+    }
+  }} />;
   if (showSettings) return <Settings user={user} onLogout={handleLogout} />;
 
   let mainContent;

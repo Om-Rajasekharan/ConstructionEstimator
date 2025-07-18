@@ -244,40 +244,77 @@ router.get('/:projectId/:docId/:pageNum/mask', authUser, async (req, res) => {
       maskPath = `${folder}/page_${pageNumInt}_mask.png`;
     }
     if (!maskPath) {
-      console.error('[imageproxy/mask] Mask image path not found', { projectId, docId, pageNum });
       return res.status(404).json({ error: 'Mask image path not found' });
     }
-    console.log(`[imageproxy/mask] Attempting to fetch mask from GCS: ${maskPath}`);
     const gcsFile = bucket.file(maskPath);
     // Check if file exists before streaming
     try {
       const [exists] = await gcsFile.exists();
       if (!exists) {
-        console.error('[imageproxy/mask] Mask file does not exist in GCS:', maskPath);
         return res.status(404).json({ error: 'Mask file does not exist in GCS', maskPath });
-      } else {
-        console.log(`[imageproxy/mask] Mask file exists in GCS: ${maskPath}`);
       }
     } catch (existErr) {
-      console.error('[imageproxy/mask] Error checking mask file existence:', existErr);
       return res.status(500).json({ error: 'Error checking mask file existence', details: existErr.message });
     }
     res.set('Content-Type', 'image/png');
-    const stream = gcsFile.createReadStream();
-    stream.on('open', () => {
-      console.log(`[imageproxy/mask] Streaming mask image for ${maskPath}`);
-    });
-    stream.on('end', () => {
-      console.log(`[imageproxy/mask] Finished streaming mask image for ${maskPath}`);
-    });
-    stream.on('error', err => {
-      console.error('[imageproxy/mask] Error streaming mask image:', err);
-      res.status(500).json({ error: 'Failed to fetch mask image', details: err.message });
-    });
-    stream.pipe(res);
+    gcsFile.createReadStream()
+      .on('error', err => {
+        res.status(500).json({ error: 'Failed to fetch mask image', details: err.message });
+      })
+      .pipe(res);
   } catch (err) {
     console.error('Server error', { error: err });
     res.status(500).json({ error: 'Server error', details: err.message });
+  }
+});
+
+// Fetch mask JSON for a given page
+router.get('/mask-json', authUser, async (req, res) => {
+  try {
+    const { projectId, docId, pageNum } = req.query;
+    if (!projectId || !docId || !pageNum) {
+      return res.status(400).json({ error: 'Missing projectId, docId, or pageNum' });
+    }
+    // Find project and file for owner validation and folder extraction
+    const project = await Project.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+    const file = project.files.id(docId);
+    if (!file) {
+      return res.status(404).json({ error: 'Document not found' });
+    }
+    if (String(project.owner) !== String(req.user._id)) return res.status(403).json({ error: 'Forbidden' });
+    // Compose GCS path for mask JSON, consistent with mask image route
+    let maskJsonPath = null;
+    if (file.gcsUrl && file.gcsUrl.includes('/')) {
+      const parts = file.gcsUrl.replace(/^gs:\/\//, '').split('/').slice(1, -1);
+      const folder = parts.join('/');
+      maskJsonPath = `${folder}/page_${parseInt(pageNum, 10)}_mask.json`;
+    }
+    if (!maskJsonPath) {
+      console.error('[imageproxy/mask-json] Mask JSON path not found', { projectId, docId, pageNum });
+      return res.status(404).json({ error: 'Mask JSON path not found' });
+    }
+    console.log(`[imageproxy/mask-json] Attempting to fetch mask JSON from GCS: ${maskJsonPath}`);
+    const jsonFile = bucket.file(maskJsonPath);
+    try {
+      const [exists] = await jsonFile.exists();
+      if (!exists) {
+        console.error('[imageproxy/mask-json] Mask JSON file does not exist in GCS:', maskJsonPath);
+        return res.status(404).json({ error: 'Mask JSON not found', maskJsonPath });
+      } else {
+        console.log(`[imageproxy/mask-json] Mask JSON file exists in GCS: ${maskJsonPath}`);
+      }
+    } catch (existErr) {
+      console.error('[imageproxy/mask-json] Error checking mask JSON file existence:', existErr);
+      return res.status(500).json({ error: 'Error checking mask JSON file existence', details: existErr.message });
+    }
+    const [contents] = await jsonFile.download();
+    res.set('Content-Type', 'application/json');
+    res.send(contents);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 

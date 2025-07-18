@@ -11,6 +11,7 @@
     "start": "vite"
   },
   "dependencies": {
+    "@mui/x-data-grid": "^8.8.0",
     "construction_estimator": "file:..",
     "pdfjs-dist": "^4.8.69",
     "react": "^18.2.0",

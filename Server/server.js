@@ -4,6 +4,7 @@ const cors = require('cors');
 const path = require('path');
 const mongoose = require('mongoose');
 const pdfparserRoutes = require('./routes/pdfparser');
+const { router: projectsRouter } = require('./routes/projects');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -29,11 +30,12 @@ app.use(cors({
 app.use(express.json());
 
 app.use('/api/auth', require('./routes/userverification'));
-app.use('/api/projects', require('./routes/projects'));
+app.use('/api/projects', projectsRouter);
 app.use('/api/postresponse', require('./routes/postresponse'));
 app.use('/api/conversation', require('./routes/conversation'));
 app.use('/api/image', require('./routes/imageproxy'));
 app.use('/api/imagemasks', require('./routes/imagemasks'));
+app.use('/api/estimation', require('./routes/estimation'));
 
 mongoose.connect(process.env.MONGO_DB_URI, {
   useNewUrlParser: true,

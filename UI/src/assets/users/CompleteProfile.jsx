@@ -9,6 +9,7 @@ function CompleteProfile({ onComplete, token }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    console.log('CompleteProfile token:', token); // Add this before handleSubmit
     const res = await fetch(import.meta.env.VITE_API_URL + '/api/auth/complete-profile', {
       method: 'POST',
       headers: {

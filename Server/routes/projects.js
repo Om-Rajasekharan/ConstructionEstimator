@@ -36,6 +36,20 @@ router.post('/', authUser, async (req, res) => {
   if (!name) return res.status(400).json({ error: 'Project name required' });
   try {
     const project = await Project.create({ name, owner: req.user._id });
+
+    // Create empty estimation_table.json in GCS for this project
+    try {
+      const { Storage } = require('@google-cloud/storage');
+      const storage = new Storage({ keyFilename: path.join(__dirname, '../gcs-key.json') });
+      const bucketName = process.env.GCS_BUCKET_NAME || 'pdfs_and_responses';
+      const bucket = storage.bucket(bucketName);
+      const estimationPath = `project_${project._id}/estimation_table.json`;
+      const file = bucket.file(estimationPath);
+      await file.save(Buffer.from(JSON.stringify({ items: [] }, null, 2)), { contentType: 'application/json' });
+    } catch (err) {
+      console.error('Failed to create estimation_table.json in GCS:', err);
+    }
+
     const projects = await Project.find({ owner: req.user._id }).sort({ createdAt: -1 });
     res.json({ project, projects });
   } catch (err) {
@@ -88,4 +102,7 @@ router.get('/:id', authUser, async (req, res) => {
   res.json(projectObj);
 });
 
-module.exports = router;
+module.exports = {
+  router,
+  authUser
+};
