@@ -242,50 +242,56 @@ export default function Workspace({ project }) {
       }}
     >
       <div style={{ height: 36, background: '#f7f7fa', borderBottom: '1px solid #eee', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', gap: 8, position: 'relative' }}>
-        {/* Workspace/Estimation toggle button */}
-        <button
-          onClick={() => setShowEstimation(v => !v)}
-          style={{
-            fontSize: 15,
-            padding: '6px 18px',
-            background: showEstimation ? '#ffd600' : '#1976d2',
-            color: showEstimation ? '#222' : '#fff',
-            border: '1px solid #ccc',
-            borderRadius: 8,
-            fontWeight: 600,
-            cursor: 'pointer',
-            marginRight: 12,
-            transition: 'all 0.2s',
-          }}
-        >
-          {showEstimation ? 'Back to Workspace' : 'View Estimation Table'}
-        </button>
-        {!showEstimation && (
-          <>
-            <Tools activeTool={activeTool} setActiveTool={setActiveTool} />
-            {maskExists && selectedDoc && selectedPage && (
-              <div style={{ position: 'absolute', left: '50%', top: 0, transform: 'translateX(-50%)', zIndex: 10 }}>
-                <BlueprintMaskToggle
-                  projectId={project?._id || project?.id}
-                  docId={selectedDoc.id}
-                  pageNum={selectedPage}
-                  blueprintImgSrc={selectedDoc.pageImages && selectedDoc.pageImages[selectedPage - 1]?.url ? selectedDoc.pageImages[selectedPage - 1].url : getDisplayUrl(selectedDoc)}
-                  style={{ marginTop: 2 }}
-                  showMask={showMask}
-                  setShowMask={setShowMask}
-                  setMaskImgUrl={setMaskImgUrl}
-                />
-              </div>
-            )}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', width: '100%', gap: 16, position: 'relative' }}>
+          {/* Left: Workspace/Estimation toggle */}
+          <button
+            onClick={() => setShowEstimation(v => !v)}
+            style={{
+              fontSize: 15,
+              padding: '6px 18px',
+              background: showEstimation ? '#ffd600' : '#1976d2',
+              color: showEstimation ? '#222' : '#fff',
+              border: '1px solid #ccc',
+              borderRadius: 8,
+              fontWeight: 600,
+              cursor: 'pointer',
+              marginRight: 8,
+              transition: 'all 0.2s',
+            }}
+          >
+            {showEstimation ? 'Back to Workspace' : 'View Estimation Table'}
+          </button>
+          {/* Center: Tools and Mask Toggle */}
+          {!showEstimation && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, flex: 1, minWidth: 0 }}>
+              <Tools activeTool={activeTool} setActiveTool={setActiveTool} />
+              {maskExists && selectedDoc && selectedPage && (
+                <div style={{ marginLeft: 12 }}>
+                  <BlueprintMaskToggle
+                    projectId={project?._id || project?.id}
+                    docId={selectedDoc.id}
+                    pageNum={selectedPage}
+                    blueprintImgSrc={selectedDoc.pageImages && selectedDoc.pageImages[selectedPage - 1]?.url ? selectedDoc.pageImages[selectedPage - 1].url : getDisplayUrl(selectedDoc)}
+                    style={{ marginTop: 2 }}
+                    showMask={showMask}
+                    setShowMask={setShowMask}
+                    setMaskImgUrl={setMaskImgUrl}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+          {/* Right: Zoom controls */}
+          {!showEstimation && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
               <span style={{ fontSize: 13, color: '#888', marginRight: 8 }}>Zoom:</span>
               <button onClick={() => setZoom(z => Math.max(0.1, +(z - 0.1).toFixed(2)))} style={{ fontSize: 16, padding: '2px 8px', marginRight: 2 }}>−</button>
               <span style={{ minWidth: 48, textAlign: 'center', color: '#222', fontWeight: 500, fontSize: 15, background: '#f0f0f7', borderRadius: 4, padding: '2px 8px' }}>{Math.round(Math.max(zoom * 100, 10))}%</span>
               <button onClick={() => setZoom(z => Math.min(5, +(z + 0.1).toFixed(2)))} style={{ fontSize: 16, padding: '2px 8px', marginLeft: 2 }}>+</button>
               <button onClick={() => setZoom(1)} style={{ fontSize: 13, padding: '2px 10px', marginLeft: 12, background: '#f0f0f7', border: '1px solid #ccc', borderRadius: 4, color: '#444', cursor: 'pointer' }}>Reset</button>
             </div>
-          </>
-        )}
+          )}
+        </div>
       </div>
       {/* Main content: workspace or estimation table */}
       {showEstimation ? (

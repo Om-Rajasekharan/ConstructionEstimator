@@ -7,7 +7,6 @@ import DrawingTool from './tools/drawing';
 import HighlightTool from './tools/highlight';
 import StickyNoteRender from './tools/stickyNoteRender.jsx';
 import DrawingRender from './tools/DrawingRender.jsx';
-import BlueprintMaskToggle from './vision/BlueprintMaskToggle.jsx';
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 
 async function fetchManifest(url) {
@@ -438,6 +437,40 @@ export default function DocumentViewer({ document: pdfDocument, projectId, selec
     ));
   }
 
+  // Add these states at the top of your component
+  const [maskJson, setMaskJson] = useState(null);
+  const [selectedRoomIdx, setSelectedRoomIdx] = useState(null);
+  const [roomMaterialInputs, setRoomMaterialInputs] = useState({});
+
+  // Helper to estimate square feet (assuming maskJson.image is in pixels, and you know the scale)
+  function estimateSqFt(rectWidth, rectHeight, maskJson) {
+    // Example: assume blueprint is 1/8" = 1' and image is scanned at 300 DPI
+    // You may need to adjust this formula based on your actual scale!
+    // For now, just show pixel area as a placeholder
+    if (!maskJson?.image) return 0;
+    // Example: 1 pixel = X feet (you should replace this with your real scale)
+    // For now, just return area in square feet assuming 1 pixel = 0.01 ft
+    const pixelToFt = 0.01;
+    return Math.round(rectWidth * rectHeight * pixelToFt * pixelToFt);
+  }
+
+  // Fetch mask JSON when mask is shown
+  useEffect(() => {
+    if (!toggledImgSrc || !projectId || !pdfDocument?.id || !selectedPage) return;
+    fetch(`${import.meta.env.VITE_API_URL}/api/image/mask-json?projectId=${projectId}&docId=${pdfDocument.id}&pageNum=${selectedPage}`, {
+      credentials: 'include',
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
+      },
+    })
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        console.log('[MASK JSON]', data); // <-- Add this line
+        setMaskJson(data);
+      })
+      .catch(() => setMaskJson(null));
+  }, [toggledImgSrc, projectId, pdfDocument?.id, selectedPage]);
+
   return (
     <div className="document-viewer" style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', userSelect: dragging ? 'none' : 'auto', cursor: dragging ? 'grabbing' : 'auto' }}>
       {pdfDocument ? (
@@ -489,37 +522,207 @@ export default function DocumentViewer({ document: pdfDocument, projectId, selec
               onGestureChange={e => e.preventDefault()}
               onGestureEnd={e => e.preventDefault()}
             >
-              {/* Mask and polygons overlay for image docs */}
-              <BlueprintMaskToggle
-                projectId={projectId}
-                docId={docId}
-                pageNum={imgPage}
-                blueprintImgSrc={imgSrc}
-                style={{ width: '100%', height: '100%' }}
-                showMask={true}
-                setShowMask={() => {}}
-                setMaskImgUrl={() => {}}
-              />
-              {/* Sticky notes for image mode */}
-              <StickyNoteRender
-                stickyNotes={stickyNotes}
-                setStickyNotes={setStickyNotes}
-                isImage={true}
-                displayW={imgNaturalSize.width}
-                displayH={imgNaturalSize.height}
-                page={imgPage}
-              />
-              {/* Drawing overlay for image mode */}
-              <DrawingRender
-                drawingPaths={drawingPaths}
-                setDrawingPaths={setDrawingPaths}
-                drawingCurrentPath={drawingCurrentPath}
-                setDrawingCurrentPath={setDrawingCurrentPath}
-                displayW={imgNaturalSize.width}
-                displayH={imgNaturalSize.height}
-                page={imgPage}
-                isImage={true}
-              />
+              <div
+                style={{
+                  position: 'absolute',
+                  left: 0,
+                  top: 0,
+                  width: '100%',
+                  height: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  pointerEvents: 'none',
+                }}
+              >
+                {manifestLoading && <span style={{ color: '#888', position: 'absolute', left: 16, top: 16, pointerEvents: 'auto' }}>Loading manifest...</span>}
+                {manifestError && <span style={{ color: 'red', position: 'absolute', left: 16, top: 16, pointerEvents: 'auto' }}>{manifestError}</span>}
+                {imageList && imageList.length > 0 && imgPage >= 1 && imgPage <= imageList.length ? (
+                  <>
+                    {imgLoading && <span style={{ color: '#888', position: 'absolute', left: 16, top: 40, pointerEvents: 'auto' }}>Loading image...</span>}
+                    {imgError && <span style={{ color: 'red', position: 'absolute', left: 16, top: 40, pointerEvents: 'auto' }}>{imgError}</span>}
+                    {imgSrc && (() => {
+                      const maxW = window.innerWidth;
+                      const maxH = window.innerHeight * 0.9;
+                      const naturalW = imgNaturalSize.width;
+                      const naturalH = imgNaturalSize.height;
+                      let scale = 1;
+                      if (naturalW && naturalH) {
+                        scale = Math.min(maxW / naturalW, maxH / naturalH, 1);
+                      }
+                      const displayW = naturalW * scale * imgZoom;
+                      const displayH = naturalH * scale * imgZoom;
+                      return (
+                        <div
+                          style={{
+                            position: 'absolute',
+                            left: '50%',
+                            top: '50%',
+                            transform: `translate(-50%, -50%) translate(${imgPan.x}px, ${imgPan.y}px)`,
+                            width: displayW,
+                            height: displayH,
+                            boxShadow: '0 2px 8px #0001',
+                            background: '#fff',
+                            cursor: 'inherit',
+                            userSelect: 'none',
+                            pointerEvents: 'auto',
+                            maxWidth: maxW,
+                            maxHeight: maxH,
+                          }}
+                          onMouseDown={handleImageMouseDown}
+                        >
+                          <img
+                            src={imgSrc}
+                            alt={`Page ${imgPage}`}
+                            style={{
+                              display: 'block',
+                              width: displayW,
+                              height: displayH,
+                              objectFit: 'contain',
+                              pointerEvents: 'none',
+                              userSelect: 'none',
+                              opacity: imgLoading ? 0.5 : 1,
+                              cursor: 'inherit',
+                            }}
+                            draggable={false}
+                            onLoad={e => {
+                              setImgNaturalSize({
+                                width: e.target.naturalWidth,
+                                height: e.target.naturalHeight
+                              });
+                            }}
+                          />
+                          {/* --- SVG overlay for selectable mask regions --- */}
+                          {maskJson?.predictions?.length > 0 && (
+                            <svg
+                              width={displayW}
+                              height={displayH}
+                              style={{
+                                position: 'absolute',
+                                left: 0,
+                                top: 0,
+                                pointerEvents: 'auto',
+                                zIndex: 10,
+                              }}
+                            >
+                              {maskJson.predictions.map((pred, idx) => {
+                                const { x, y, width, height } = pred;
+                                if ([x, y, width, height].some(v => v == null)) return null;
+                                // Scale from original image size to displayed size
+                                const scaleX = displayW / maskJson.image.width;
+                                const scaleY = displayH / maskJson.image.height;
+                                const left = (x - width / 2) * scaleX;
+                                const top = (y - height / 2) * scaleY;
+                                const rectWidth = width * scaleX;
+                                const rectHeight = height * scaleY;
+                                const selected = selectedRoomIdx === idx;
+                                return (
+                                  <g key={idx}>
+                                    <rect
+                                      x={left}
+                                      y={top}
+                                      width={rectWidth}
+                                      height={rectHeight}
+                                      fill={selected ? 'rgba(255,215,0,0.5)' : 'rgba(0,200,255,0.35)'}
+                                      stroke={selected ? '#FFD700' : '#FF0080'}
+                                      strokeWidth={selected ? 4 : 2}
+                                      style={{ cursor: 'pointer', pointerEvents: 'auto' }}
+                                      onClick={e => {
+                                        e.stopPropagation();
+                                        setSelectedRoomIdx(idx);
+                                      }}
+                                    />
+                                    {/* Empty text box for now */}
+                                    <text
+                                      x={left + rectWidth / 2}
+                                      y={top + rectHeight / 2}
+                                      textAnchor="middle"
+                                      alignmentBaseline="middle"
+                                      fontSize={18}
+                                      fill="#222"
+                                      pointerEvents="none"
+                                    >
+                                      {/* No label */}
+                                    </text>
+                                    {/* Bubble form for selected room */}
+                                    {selected && (
+                                      <foreignObject
+                                        x={left + rectWidth + 8}
+                                        y={top}
+                                        width={180}
+                                        height={110}
+                                        style={{ pointerEvents: 'auto', zIndex: 100 }}
+                                      >
+                                        <div
+                                          style={{
+                                            background: '#fff',
+                                            border: '2px solid #FFD700',
+                                            borderRadius: 12,
+                                            boxShadow: '0 2px 12px rgba(30,60,114,0.15)',
+                                            padding: 12,
+                                            fontSize: 15,
+                                            width: 160,
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            gap: 8,
+                                          }}
+                                        >
+                                          <div style={{ fontWeight: 700, color: '#222', marginBottom: 2 }}>
+                                            Estimated Sq Ft: <span style={{ color: '#1976d2' }}>{estimateSqFt(rectWidth / scaleX, rectHeight / scaleY, maskJson)}</span>
+                                          </div>
+                                          <label style={{ fontSize: 13, color: '#444', marginBottom: 2 }}>
+                                            Floor Material:
+                                            <input
+                                              type="text"
+                                              value={roomMaterialInputs[idx] || ''}
+                                              onChange={e => setRoomMaterialInputs(inputs => ({ ...inputs, [idx]: e.target.value }))}
+                                              style={{
+                                                marginLeft: 6,
+                                                padding: '4px 8px',
+                                                borderRadius: 6,
+                                                border: '1px solid #ccc',
+                                                fontSize: 14,
+                                                width: '90%',
+                                              }}
+                                              placeholder="e.g. Tile, Carpet"
+                                            />
+                                          </label>
+                                          <button
+                                            style={{
+                                              marginTop: 4,
+                                              background: '#ffd600',
+                                              color: '#222',
+                                              border: 'none',
+                                              borderRadius: 6,
+                                              padding: '6px 12px',
+                                              fontWeight: 600,
+                                              cursor: 'pointer',
+                                            }}
+                                            onClick={e => {
+                                              e.stopPropagation();
+                                              // You can handle save logic here if needed
+                                            }}
+                                          >
+                                            Save
+                                          </button>
+                                        </div>
+                                      </foreignObject>
+                                    )}
+                                  </g>
+                                );
+                              })}
+                            </svg>
+                          )}
+                          {/* --- end SVG overlay --- */}
+                          {/* ...other overlays... */}
+                        </div>
+                      );
+                    })()}
+                  </>
+                ) : (!manifestLoading && !manifestError) ? (
+                  <span style={{ color: '#888', position: 'absolute', left: 16, top: 16, pointerEvents: 'auto' }}>No image for this page</span>
+                ) : null}
+              </div>
             </div>
           ) : pdfDocument.type === 'application/pdf' ? (
             <div
