@@ -456,7 +456,11 @@ export default function DocumentViewer({ document: pdfDocument, projectId, selec
 
   // Fetch mask JSON when mask is shown
   useEffect(() => {
-    if (!toggledImgSrc || !projectId || !pdfDocument?.id || !selectedPage) return;
+    if (!toggledImgSrc || !projectId || !pdfDocument?.id || !selectedPage) {
+      setMaskJson(null);
+      setSelectedRoomIdx(null);
+      return;
+    }
     fetch(`${import.meta.env.VITE_API_URL}/api/image/mask-json?projectId=${projectId}&docId=${pdfDocument.id}&pageNum=${selectedPage}`, {
       credentials: 'include',
       headers: {
@@ -465,7 +469,7 @@ export default function DocumentViewer({ document: pdfDocument, projectId, selec
     })
       .then(res => res.ok ? res.json() : null)
       .then(data => {
-        console.log('[MASK JSON]', data); // <-- Add this line
+        console.log('[MASK JSON]', data);
         setMaskJson(data);
       })
       .catch(() => setMaskJson(null));
@@ -561,13 +565,16 @@ export default function DocumentViewer({ document: pdfDocument, projectId, selec
                             transform: `translate(-50%, -50%) translate(${imgPan.x}px, ${imgPan.y}px)`,
                             width: displayW,
                             height: displayH,
-                            boxShadow: '0 2px 8px #0001',
-                            background: '#fff',
+                            boxShadow: '0 4px 24px #1976d244',
+                            background: 'rgba(255,255,255,0.98)',
+                            borderRadius: 18,
                             cursor: 'inherit',
                             userSelect: 'none',
                             pointerEvents: 'auto',
                             maxWidth: maxW,
                             maxHeight: maxH,
+                            border: '1.5px solid #e3eafc',
+                            transition: 'box-shadow 0.2s',
                           }}
                           onMouseDown={handleImageMouseDown}
                         >
@@ -583,6 +590,9 @@ export default function DocumentViewer({ document: pdfDocument, projectId, selec
                               userSelect: 'none',
                               opacity: imgLoading ? 0.5 : 1,
                               cursor: 'inherit',
+                              borderRadius: 16,
+                              boxShadow: '0 2px 12px #1976d211',
+                              border: '1px solid #e3eafc',
                             }}
                             draggable={false}
                             onLoad={e => {
@@ -608,7 +618,6 @@ export default function DocumentViewer({ document: pdfDocument, projectId, selec
                               {maskJson.predictions.map((pred, idx) => {
                                 const { x, y, width, height } = pred;
                                 if ([x, y, width, height].some(v => v == null)) return null;
-                                // Scale from original image size to displayed size
                                 const scaleX = displayW / maskJson.image.width;
                                 const scaleY = displayH / maskJson.image.height;
                                 const left = (x - width / 2) * scaleX;
@@ -623,54 +632,48 @@ export default function DocumentViewer({ document: pdfDocument, projectId, selec
                                       y={top}
                                       width={rectWidth}
                                       height={rectHeight}
-                                      fill={selected ? 'rgba(255,215,0,0.5)' : 'rgba(0,200,255,0.35)'}
-                                      stroke={selected ? '#FFD700' : '#FF0080'}
+                                      fill={selected ? 'rgba(255,215,0,0.55)' : 'rgba(0,200,255,0.25)'}
+                                      stroke={selected ? '#FFD700' : '#1976d2'}
                                       strokeWidth={selected ? 4 : 2}
-                                      style={{ cursor: 'pointer', pointerEvents: 'auto' }}
+                                      style={{
+                                        cursor: 'pointer',
+                                        pointerEvents: 'auto',
+                                        filter: selected ? 'drop-shadow(0 0 8px #ffd60088)' : 'drop-shadow(0 0 4px #1976d288)',
+                                        transition: 'all 0.18s',
+                                      }}
                                       onClick={e => {
                                         e.stopPropagation();
                                         setSelectedRoomIdx(idx);
                                       }}
                                     />
-                                    {/* Empty text box for now */}
-                                    <text
-                                      x={left + rectWidth / 2}
-                                      y={top + rectHeight / 2}
-                                      textAnchor="middle"
-                                      alignmentBaseline="middle"
-                                      fontSize={18}
-                                      fill="#222"
-                                      pointerEvents="none"
-                                    >
-                                      {/* No label */}
-                                    </text>
                                     {/* Bubble form for selected room */}
                                     {selected && (
                                       <foreignObject
-                                        x={left + rectWidth + 8}
+                                        x={left + rectWidth + 12}
                                         y={top}
-                                        width={180}
-                                        height={110}
+                                        width={200}
+                                        height={120}
                                         style={{ pointerEvents: 'auto', zIndex: 100 }}
                                       >
                                         <div
                                           style={{
-                                            background: '#fff',
+                                            background: 'rgba(255,255,255,0.98)',
                                             border: '2px solid #FFD700',
-                                            borderRadius: 12,
-                                            boxShadow: '0 2px 12px rgba(30,60,114,0.15)',
-                                            padding: 12,
-                                            fontSize: 15,
-                                            width: 160,
+                                            borderRadius: 14,
+                                            boxShadow: '0 4px 24px rgba(30,60,114,0.18)',
+                                            padding: 16,
+                                            fontSize: 16,
+                                            width: 180,
                                             display: 'flex',
                                             flexDirection: 'column',
-                                            gap: 8,
+                                            gap: 10,
+                                            animation: 'fadeInBubble 0.3s',
                                           }}
                                         >
-                                          <div style={{ fontWeight: 700, color: '#222', marginBottom: 2 }}>
+                                          <div style={{ fontWeight: 700, color: '#222', marginBottom: 4 }}>
                                             Estimated Sq Ft: <span style={{ color: '#1976d2' }}>{estimateSqFt(rectWidth / scaleX, rectHeight / scaleY, maskJson)}</span>
                                           </div>
-                                          <label style={{ fontSize: 13, color: '#444', marginBottom: 2 }}>
+                                          <label style={{ fontSize: 14, color: '#444', marginBottom: 2 }}>
                                             Floor Material:
                                             <input
                                               type="text"
@@ -678,29 +681,32 @@ export default function DocumentViewer({ document: pdfDocument, projectId, selec
                                               onChange={e => setRoomMaterialInputs(inputs => ({ ...inputs, [idx]: e.target.value }))}
                                               style={{
                                                 marginLeft: 6,
-                                                padding: '4px 8px',
-                                                borderRadius: 6,
+                                                padding: '6px 10px',
+                                                borderRadius: 8,
                                                 border: '1px solid #ccc',
-                                                fontSize: 14,
+                                                fontSize: 15,
                                                 width: '90%',
+                                                background: '#f7f7fa',
+                                                boxShadow: '0 1px 4px #bfc2c722',
                                               }}
                                               placeholder="e.g. Tile, Carpet"
                                             />
                                           </label>
                                           <button
                                             style={{
-                                              marginTop: 4,
-                                              background: '#ffd600',
+                                              marginTop: 6,
+                                              background: 'linear-gradient(90deg, #ffd600 0%, #fffbe6 100%)',
                                               color: '#222',
                                               border: 'none',
-                                              borderRadius: 6,
-                                              padding: '6px 12px',
-                                              fontWeight: 600,
+                                              borderRadius: 8,
+                                              padding: '8px 16px',
+                                              fontWeight: 700,
                                               cursor: 'pointer',
+                                              boxShadow: '0 2px 8px #ffd60044',
                                             }}
                                             onClick={e => {
                                               e.stopPropagation();
-                                              // You can handle save logic here if needed
+                                              // Save logic here if needed
                                             }}
                                           >
                                             Save
@@ -711,9 +717,14 @@ export default function DocumentViewer({ document: pdfDocument, projectId, selec
                                   </g>
                                 );
                               })}
+                              <style>{`
+                                @keyframes fadeInBubble {
+                                  from { opacity: 0; transform: translateY(10px);}
+                                  to { opacity: 1; transform: translateY(0);}
+                                }
+                              `}</style>
                             </svg>
                           )}
-                          {/* --- end SVG overlay --- */}
                           {/* ...other overlays... */}
                         </div>
                       );

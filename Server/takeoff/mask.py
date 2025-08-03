@@ -18,6 +18,7 @@ def run_mask(image_path, output_dir=None, threshold=200, verbose=True):
         raise RuntimeError("ROBOFLOW_API_KEY not found")
 
     URL = "https://detect.roboflow.com/estima_ai/2"
+    #URL = "https://detect.roboflow.com/arhitecture-f9imr/1"
     PARAMS = {
         "api_key": API_KEY,
         "confidence": 10,
