@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import Conversation from './conversation.jsx';
+import Conversation from './Conversation.jsx';
 import { Paper, Typography, Box, Button, TextField, Divider } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';

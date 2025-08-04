@@ -3,9 +3,9 @@
   height: 100vh;
   min-width: 220px;
   max-width: 220px;
-  background: linear-gradient(120deg, #f5f6fa 0%, #e3e4e8 100%);
-  border-right: 2px solid #e3e4e8;
-  box-shadow: 2px 0 16px 0 #bfc2c733;
+  background: linear-gradient(180deg, #fff7f2 0%, #fff6f2 40%, #fff 100%);
+  border-right: 3px solid #ff6a1a;
+  box-shadow: 2px 0 16px 0 #ff4b0033;
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -16,6 +16,17 @@
   z-index: 1200;
   transform: translateX(-100%);
   transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
+.navigation-logo {
+  width: 80px;
+  height: auto;
+  aspect-ratio: 5/7;
+  object-fit: contain;
+  margin: 1.2rem auto 0.5rem auto;
+  display: block;
+  filter: drop-shadow(0 4px 18px #ff6a1a33);
+  border-radius: 16px;
+  background: none;
+}
 }
 .navigation-root.open {
   transform: translateX(0);
@@ -54,7 +65,7 @@
   min-height: 48px;
 }
 .navigation-listitem.selected, .navigation-listitem:hover {
-  background: #232526;
+  background: linear-gradient(90deg, #ffecd9 0%, #ffb380 100%);
 }
 .navigation-listitem .MuiListItemIcon-root {
   min-width: 0;
@@ -64,7 +75,7 @@
 }
 .navigation-listitem.selected .MuiListItemIcon-root,
 .navigation-listitem:hover .MuiListItemIcon-root {
-  color: #fff;
+  color: #ff6a1a;
 }
 .navigation-listitem .MuiListItemText-root span {
   font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
@@ -76,7 +87,7 @@
 }
 .navigation-listitem.selected .MuiListItemText-root span,
 .navigation-listitem:hover .MuiListItemText-root span {
-  color: #fff;
+  color: #ff6a1a;
 }
 
 .app-main-content {

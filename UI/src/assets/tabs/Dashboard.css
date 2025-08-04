@@ -1,29 +1,42 @@
 .dashboard-bg {
   min-height: 100vh;
-  background: linear-gradient(120deg, #f5f6fa 0%, #e3e4e8 60%, #d1d3db 100%);
+  background: linear-gradient(180deg, #fff7f2 0%, #fff6f2 40%, #fff 100%);
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding-top: 48px;
+  padding-top: 88px;
 }
 .dashboard-container {
   width: 100%;
-  max-width: 1100px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 0 2.5vw 4vw 2.5vw;
+  padding: 0 2vw 4vw 2vw;
   display: flex;
   flex-direction: column;
   align-items: stretch;
 }
 .dashboard-title {
   font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
-  font-size: 2.2rem;
+  font-size: 2.3rem;
   font-weight: 900;
   color: #232526;
   letter-spacing: 1.2px;
   margin-bottom: 2.2rem;
   text-transform: uppercase;
   text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+.dashboard-logo {
+  height: 56px;
+  width: auto;
+  aspect-ratio: 5/7;
+  object-fit: contain;
+  margin-right: 1.2rem;
+  filter: drop-shadow(0 4px 18px #ff6a1a33);
+  border-radius: 16px;
+  background: none;
+}
 }
 .dashboard-add-card {
   border-radius: 18px;
@@ -64,15 +77,17 @@
   text-transform: uppercase;
   letter-spacing: 1px;
   padding: 0.7rem 2.2rem;
-  background: #232526;
+  background: linear-gradient(90deg, #ff6a1a 0%, #ffb380 100%);
   color: #fff;
-  box-shadow: 0 2px 8px 0 #bfc2c733;
-  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+  box-shadow: 0 2px 8px 0 #ff4b0033;
+  border: none;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s, transform 0.18s;
 }
 .dashboard-add-btn:hover {
-  background: #444;
+  background: linear-gradient(90deg, #ffb380 0%, #ff6a1a 100%);
   color: #fff;
-  box-shadow: 0 4px 16px 0 #bfc2c744;
+  box-shadow: 0 8px 32px 0 #ff4b0033;
+  transform: translateY(-2px) scale(1.04);
 }
 .dashboard-section-title {
   font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
@@ -88,8 +103,8 @@
 }
 .dashboard-project-card {
   border-radius: 18px;
-  box-shadow: 0 4px 24px 0 #bfc2c733;
-  border: 2px solid #e3e4e8;
+  box-shadow: 0 4px 24px 0 #ff4b0033;
+  border: 2.5px solid #ffe3d1;
   background: #fff;
   transition: box-shadow 0.2s, border-color 0.2s, transform 0.15s;
   cursor: pointer;
@@ -100,12 +115,12 @@
   min-height: 180px;
 }
 .dashboard-project-card:hover {
-  box-shadow: 0 8px 32px 0 #bfc2c744;
-  border-color: #232526;
-  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 8px 32px 0 #ff4b0033;
+  border-color: #ff6a1a;
+  transform: translateY(-4px) scale(1.04);
 }
 .dashboard-project-avatar {
-  background: linear-gradient(135deg, #e3e4e8 0%, #232526 100%);
+  background: linear-gradient(135deg, #ffecd9 0%, #ff6a1a 100%);
   color: #fff;
   width: 60px !important;
   height: 60px !important;
@@ -113,7 +128,7 @@
   font-size: 2.1rem;
   font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
   font-weight: 900;
-  box-shadow: 0 2px 8px 0 #bfc2c733;
+  box-shadow: 0 2px 8px 0 #ff4b0033;
 }
 .dashboard-project-title {
   font-family: 'Inter', 'Segoe UI', Arial, sans-serif;

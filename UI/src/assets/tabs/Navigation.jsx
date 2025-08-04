@@ -64,6 +64,7 @@ const Navigation = ({ currentTab, onTabChange, onNavStateChange, appBarMode, nav
         className={`navigation-root${navOpen ? ' open' : ''}`}
         PaperProps={{ style: { top: appBarHeight, height: `calc(100vh - ${appBarHeight}px)` } }}
       >
+        <img src="/logo2t.png" alt="Company Logo" className="navigation-logo" />
         <Toolbar className="navigation-toolbar" style={{ minHeight: 48, justifyContent: 'flex-end' }}>
           <IconButton onClick={() => onNavStateChange && onNavStateChange(false)} size="small">
             <MenuOpenIcon />

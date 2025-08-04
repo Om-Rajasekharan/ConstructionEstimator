@@ -5,7 +5,7 @@ import './App.css';
 import VisualsPDF from './assets/visuals/VisualsPDF';
 import PDFProgressPopup from './assets/components/PDFProgressPopup';
 import Response from './assets/components/Response';
-import Conversation from './assets/components/conversation.jsx';
+import Conversation from './assets/components/Conversation.jsx';
 import SignInUp from './assets/users/SignInUp';
 import AuthSuccess from './AuthSuccess';
 import Settings from './assets/users/Settings';

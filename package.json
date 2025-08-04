@@ -16,7 +16,7 @@
   "keywords": [],
   "dependencies": {
     "@emotion/react": "^11.14.0",
-    "@emotion/styled": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
     "@google-cloud/storage": "^7.16.0",
     "@mui/icons-material": "^6.4.12",
     "@mui/material": "^6.4.12",

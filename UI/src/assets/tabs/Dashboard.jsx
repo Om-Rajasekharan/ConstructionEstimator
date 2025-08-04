@@ -62,14 +62,15 @@ const Dashboard = ({ user, onProjectSelect }) => {
   };
 
   return (
-    <Box className="dashboard-bg" sx={{ height: '100vh', overflow: 'hidden', background: 'linear-gradient(120deg, #f5f6fa 0%, #e3e4e8 100%)' }}>
-      <Box className="dashboard-container" style={{ paddingTop: 88, maxWidth: '1400px', width: '90vw', height: 'calc(100vh - 88px)', overflowY: 'auto', borderRadius: 24, boxShadow: '0 8px 32px 0 #bfc2c733', background: '#fff', margin: '0 auto' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, mt: 2 }}>
-          <Typography className="dashboard-title" sx={{ flexGrow: 1, fontFamily: 'Inter, Segoe UI, Arial, sans-serif', fontWeight: 800, fontSize: '2.1rem', color: '#232526', letterSpacing: 0.5 }}>
+    <Box className="dashboard-bg" sx={{ height: '100vh', overflow: 'hidden' }}>
+      <Box className="dashboard-container" style={{ paddingTop: 0, maxWidth: '1200px', width: '94vw', height: 'calc(100vh - 88px)', overflowY: 'auto', borderRadius: 24, boxShadow: '0 8px 32px 0 #ff4b0033', background: '#fff', margin: '0 auto' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, mt: 2, justifyContent: 'center', gap: 2 }}>
+          <img src="/logo2t.png" alt="Company Logo" className="dashboard-logo" />
+          <Typography className="dashboard-title" sx={{ flexGrow: 1, fontFamily: 'Inter, Segoe UI, Arial, sans-serif', fontWeight: 900, fontSize: '2.3rem', color: '#232526', letterSpacing: 1.2, textTransform: 'uppercase', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 1.2 }}>
             Welcome, {user.name || 'User'}
           </Typography>
           <Tooltip title="Add Project">
-            <IconButton sx={{ bgcolor: '#f5f6fa', border: '1.5px solid #e3e4e8', boxShadow: '0 2px 8px #bfc2c733', color: '#1976d2', '&:hover': { bgcolor: '#e3e4e8', color: '#232526' }, transition: 'all 0.18s' }} onClick={() => setAddDialogOpen(true)}>
+            <IconButton sx={{ bgcolor: '#fff7f2', border: '2px solid #ff6a1a', boxShadow: '0 2px 8px #ff4b0033', color: '#ff6a1a', '&:hover': { bgcolor: '#ffecd9', color: '#232526', borderColor: '#ff4b00' }, transition: 'all 0.18s' }} onClick={() => setAddDialogOpen(true)}>
               <AddCircleOutlineIcon fontSize="large" />
             </IconButton>
           </Tooltip>

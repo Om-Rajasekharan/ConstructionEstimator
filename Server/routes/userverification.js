@@ -101,18 +101,43 @@ router.post('/complete-profile', async (req, res) => {
       return res.status(400).json({ error: 'Invalid or expired token' });
     }
     const userId = decoded.userId;
-    const { name, company } = req.body;
-    if (!name || !company) {
-      console.log('Missing fields:', { name, company });
+    const { name, userType, adminKey, userKey } = req.body;
+    if (!name || !userType || (userType === 'admin' && !adminKey) || (userType === 'employee' && !userKey)) {
+      console.log('Missing fields:', { name, userType, adminKey, userKey });
       return res.status(400).json({ error: 'Missing fields' });
     }
-    const user = await User.findByIdAndUpdate(userId, { name, company }, { new: true });
+    // Connect to test.keys collection
+    const mongoose = require('mongoose');
+    const keysDb = mongoose.connection.useDb('test');
+    const Keys = keysDb.collection('keys');
+    let keyDoc;
+    if (userType === 'admin') {
+      keyDoc = await Keys.findOne({ Adminkey: adminKey });
+      if (!keyDoc) {
+        return res.status(400).json({ error: 'Invalid AdminKey' });
+      }
+      if (keyDoc.inuse >= 1) {
+        return res.status(400).json({ error: 'AdminKey already used' });
+      }
+      await Keys.updateOne({ _id: keyDoc._id }, { $set: { inuse: 1 } });
+    } else {
+      keyDoc = await Keys.findOne({ UserKey: userKey });
+      if (!keyDoc) {
+        return res.status(400).json({ error: 'Invalid UserKey' });
+      }
+      if (keyDoc.inuse >= keyDoc.limit) {
+        return res.status(400).json({ error: 'UserKey usage limit reached' });
+      }
+      await Keys.updateOne({ _id: keyDoc._id }, { $inc: { inuse: 1 } });
+    }
+    const company = keyDoc.company || '';
+    const user = await User.findByIdAndUpdate(userId, { name, userType, company }, { new: true });
     if (!user) {
       console.log('User not found for userId:', userId);
       return res.status(404).json({ error: 'User not found' });
     }
     console.log('Profile updated for user:', user.email);
-    res.json({ user: { email: user.email, name: user.name, company: user.company } });
+    res.json({ user: { email: user.email, name: user.name, userType: user.userType, company: user.company } });
   } catch (err) {
     console.log('General error in /complete-profile:', err);
     res.status(400).json({ error: 'Invalid or expired token' });
