@@ -31,7 +31,8 @@ function SignInUp({ onAuth }) {
   };
 
   const handleGoogle = () => {
-    window.location.href = `${API_URL}/google`;
+    const googleUrl = `${API_URL}/google`;
+    window.location.href = googleUrl;
   };
 
   return (
